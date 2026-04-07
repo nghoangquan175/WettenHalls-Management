@@ -1,0 +1,98 @@
+@use "./variables" as *;
+
+.DisplayXXLBold {
+    font-size: $font-size-xxl;
+    line-height: $line-height-xxl;
+    font-weight: $font-weight-bold;
+}
+
+.DisplayXLBold {
+    font-size: $font-size-xl;
+    line-height: $line-height-xl;
+    font-weight: $font-weight-bold;
+}
+
+.DisplayLBold {
+    font-size: $font-size-l;
+    line-height: $line-height-l;
+    font-weight: $font-weight-bold;
+}
+
+.DisplayMBold {
+    font-size: $font-size-m;
+    line-height: $line-height-m;
+    font-weight: $font-weight-bold;
+}
+
+.ContentLRegular {
+    font-size: $font-size-l;
+    line-height: $line-height-l;
+    font-weight: $font-weight-regular;
+}
+
+.ContentLLight {
+    font-size: $font-size-l;
+    line-height: $line-height-l;
+    font-weight: $font-weight-light;
+}
+
+.ContentLMedium {
+    font-size: $font-size-l;
+    line-height: $line-height-l;
+    font-weight: $font-weight-medium;
+}
+
+.ContentLBold {
+    font-size: $font-size-l;
+    line-height: $line-height-l;
+    font-weight: $font-weight-bold;
+}
+
+.ContentMRegular {
+    font-size: $font-size-m;
+    line-height: $line-height-m;
+    font-weight: $font-weight-regular;
+}
+
+.ContentMLight {
+    font-size: $font-size-m;
+    line-height: $line-height-m;
+    font-weight: $font-weight-light;
+}
+
+.ContentMMedium {
+    font-size: $font-size-m;
+    line-height: $line-height-m;
+    font-weight: $font-weight-medium;
+}
+
+.ContentMBold {
+    font-size: $font-size-m;
+    line-height: $line-height-m;
+    font-weight: $font-weight-bold;
+}
+
+.ContentSRegular {
+    font-size: $font-size-s;
+    line-height: $line-height-s;
+    font-weight: $font-weight-regular;
+}
+
+.ContentSLight {
+    font-size: $font-size-s;
+    line-height: $line-height-s;
+    font-weight: $font-weight-light;
+}
+
+.ContentSMedium {
+    font-size: $font-size-s;
+    line-height: $line-height-s;
+    font-weight: $font-weight-medium;
+}
+
+.ContentSBold {
+    font-size: $font-size-s;
+    line-height: $line-height-s;
+    font-weight: $font-weight-bold;
+}
+

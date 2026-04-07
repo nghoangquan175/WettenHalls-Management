@@ -1,0 +1,14 @@
+{
+  "name": "wettenhalls-management-workspace",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev:super": "npm run dev --prefix frontend -- --port 5173",
+    "dev:admin": "npm run dev --prefix frontend -- --port 5174",
+    "dev:server": "npm run dev --prefix backend",
+    "dev": "concurrently -n \"SUPER,ADMIN,SERVER\" -c \"blue,green,magenta\" \"npm run dev:super\" \"npm run dev:admin\" \"npm run dev:server\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

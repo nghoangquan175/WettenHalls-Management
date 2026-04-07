@@ -1,0 +1,51 @@
+//
+// Font Family
+//
+$font-family-primary: "Inter", sans-serif;
+
+//
+// Font Sizes
+//
+$font-size-xxl: 32px;
+$font-size-xl: 24px;
+$font-size-l: 20px;
+$font-size-m: 16px;
+$font-size-s: 14px;
+$font-size-xs: 12px;
+
+//
+// Line Heights
+//
+$line-height-xxl: 40px;
+$line-height-xl: 32px;
+$line-height-l: 28px;
+$line-height-m: 24px;
+$line-height-s: 20px;
+$line-height-xs: 16px;
+
+//
+// Font Weights
+//
+$font-weight-light: 300;
+$font-weight-regular: 400;
+$font-weight-medium: 500;
+$font-weight-bold: 700;
+
+//
+// Tailwind CSS v4 Bridge
+//
+:root {
+  --font-size-xxl: #{$font-size-xxl};
+  --font-size-xl: #{$font-size-xl};
+  --font-size-l: #{$font-size-l};
+  --font-size-m: #{$font-size-m};
+  --font-size-s: #{$font-size-s};
+  --font-size-xs: #{$font-size-xs};
+
+  --line-height-xxl: #{$line-height-xxl};
+  --line-height-xl: #{$line-height-xl};
+  --line-height-l: #{$line-height-l};
+  --line-height-m: #{$line-height-m};
+  --line-height-s: #{$line-height-s};
+  --line-height-xs: #{$line-height-xs};
+}
