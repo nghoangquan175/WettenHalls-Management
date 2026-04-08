@@ -1,5 +1,5 @@
 import express from 'express';
-import { getDashboardStats, createUser, getUsers, updateUserStatus, deleteUser } from '../controllers/userController';
+import { getDashboardStats, createUser, getUsers, updateUserStatus, deleteUser, updateUserPermissions } from '../controllers/userController';
 import { isAuthenticated, authorizeRoles } from '../middleware/authMiddleware';
 import { createUserValidator } from '../middleware/userValidator';
 import { validateRequest } from '../middleware/validateRequest';
@@ -11,6 +11,7 @@ router.get('/stats', isAuthenticated, authorizeRoles('SUPER_ADMIN', 'ADMIN'), ge
 router.post('/', isAuthenticated, authorizeRoles('SUPER_ADMIN'), createUserValidator, validateRequest, createUser);
 router.get('/', isAuthenticated, authorizeRoles('SUPER_ADMIN'), getUsers);
 router.patch('/:id/status', isAuthenticated, authorizeRoles('SUPER_ADMIN'), updateUserStatus);
+router.patch('/:id/permissions', isAuthenticated, authorizeRoles('SUPER_ADMIN'), updateUserPermissions);
 router.delete('/:id', isAuthenticated, authorizeRoles('SUPER_ADMIN'), deleteUser);
 
 export default router;

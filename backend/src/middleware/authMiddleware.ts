@@ -20,6 +20,13 @@ export const isAuthenticated = async (req: Request, res: Response, next: NextFun
       return;
     }
 
+    // Sync latest role and permissions to session
+    req.session.user = {
+      ...req.session.user!,
+      role: user.role,
+      permissions: user.permissions || []
+    };
+
     next();
   } catch (error) {
     res.status(500).json({ message: 'Server error during authentication' });

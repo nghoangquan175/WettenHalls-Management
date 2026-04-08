@@ -86,24 +86,6 @@ const TiptapEditor = ({ content, onChange, placeholder = 'Start writing your sto
       />
 
       <div className="relative">
-        <style>{`
-          .ProseMirror p.is-editor-empty:first-child::before {
-            content: attr(data-placeholder);
-            float: left;
-            color: #9ca3af;
-            pointer-events: none;
-            height: 0;
-          }
-          .ProseMirror {
-             outline: none;
-          }
-          .prose {
-             color: #374151;
-          }
-          .prose h1 { font-family: 'Outfit', sans-serif; font-weight: 700; color: #111827; }
-          .prose h2 { font-family: 'Outfit', sans-serif; font-weight: 700; color: #111827; }
-          .prose h3 { font-family: 'Outfit', sans-serif; font-weight: 700; color: #111827; }
-        `}</style>
         <EditorContent editor={editor} />
       </div>
     </div>

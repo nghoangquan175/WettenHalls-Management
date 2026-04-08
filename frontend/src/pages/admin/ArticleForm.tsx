@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ChevronLeft, Save, Send, CheckCircle, Image as ImageIcon, Loader2, AlertCircle, XCircle } from "lucide-react";
+import { ChevronLeft, Save, Send, CheckCircle, Image as ImageIcon, Loader2, AlertCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -141,6 +141,19 @@ const ArticleForm = () => {
     );
   }
 
+  if (isEdit && !isFetching && existingArticle) {
+    if (existingArticle.status === 'PUBLISHED') {
+      return (
+        <div className="flex flex-col items-center justify-center py-20">
+          <AlertCircle className="w-10 h-10 text-error mb-4" />
+          <h2 className="DisplayM text-gray-900 mb-2">Access Denied</h2>
+          <p className="ContentMRegular text-gray-500 mb-6">You cannot edit an article that is already published.</p>
+          <Button variant="outline" onClick={() => navigate(-1)}>Go Back</Button>
+        </div>
+      );
+    }
+  }
+
   return (
     <div className="mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       {/* Header */}
@@ -159,52 +172,53 @@ const ArticleForm = () => {
         </div>
         
         <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
-            size="md" 
-            leftIcon={<Save className="w-5 h-5" />}
-            onClick={() => handleAction('DRAFT')}
-            isLoading={mutation.isPending && currentStatus === 'DRAFT'}
-            disabled={mutation.isPending}
-          >
-            Save Draft
-          </Button>
-          
-          {user?.role === 'SUPER_ADMIN' ? (
-            <div className="flex items-center gap-2">
-              {isEdit && existingArticle?.status === 'PUBLISHED' && (
-                <Button 
-                  variant="outline" 
-                  size="md" 
-                  leftIcon={<XCircle className="w-5 h-5 text-amber-500" />}
-                  onClick={() => handleAction('UNPUBLISHED')}
-                  isLoading={mutation.isPending && currentStatus === 'UNPUBLISHED'}
-                  disabled={mutation.isPending}
-                >
-                  Unpublish
-                </Button>
-              )}
+          {(!isEdit || existingArticle?.status === 'DRAFT') ? (
+            <>
               <Button 
-                variant="primary" 
+                variant="outline" 
                 size="md" 
-                leftIcon={<CheckCircle className="w-5 h-5" />}
-                onClick={() => handleAction('PUBLISHED')}
-                isLoading={mutation.isPending && currentStatus === 'PUBLISHED'}
+                leftIcon={<Save className="w-5 h-5" />}
+                onClick={() => handleAction('DRAFT')}
+                isLoading={mutation.isPending && currentStatus === 'DRAFT'}
                 disabled={mutation.isPending}
               >
-                {existingArticle?.status === 'PUBLISHED' ? 'Update & Publish' : 'Publish Now'}
+                Save Draft
               </Button>
-            </div>
+              
+              {user?.role === 'SUPER_ADMIN' ? (
+                <Button 
+                  variant="primary" 
+                  size="md" 
+                  leftIcon={<CheckCircle className="w-5 h-5" />}
+                  onClick={() => handleAction('PUBLISHED')}
+                  isLoading={mutation.isPending && currentStatus === 'PUBLISHED'}
+                  disabled={mutation.isPending}
+                >
+                  Publish Now
+                </Button>
+              ) : (
+                <Button 
+                  variant="primary" 
+                  size="md" 
+                  leftIcon={<Send className="w-5 h-5" />}
+                  onClick={() => handleAction('PENDING')}
+                  isLoading={mutation.isPending && currentStatus === 'PENDING'}
+                  disabled={mutation.isPending}
+                >
+                  Submit for Review
+                </Button>
+              )}
+            </>
           ) : (
             <Button 
               variant="primary" 
               size="md" 
-              leftIcon={<Send className="w-5 h-5" />}
-              onClick={() => handleAction('PENDING')}
-              isLoading={mutation.isPending && currentStatus === 'PENDING'}
+              leftIcon={<Save className="w-5 h-5" />}
+              onClick={() => handleAction(existingArticle!.status)}
+              isLoading={mutation.isPending}
               disabled={mutation.isPending}
             >
-              Submit for Review
+              Save Changes
             </Button>
           )}
         </div>

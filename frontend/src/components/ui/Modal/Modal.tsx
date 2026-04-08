@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -46,7 +47,7 @@ export const Modal: React.FC<ModalProps> = ({
     xl: 'max-w-5xl'
   };
 
-  return (
+  return createPortal(
     <div className={cn(
       "fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 m-0",
       isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -75,17 +76,18 @@ export const Modal: React.FC<ModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="p-6 max-h-[70vh] overflow-y-auto">
+        <div className="p-6 max-h-[70vh] overflow-y-auto w-full">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className="p-6 bg-gray-50/50 border-t border-gray-100 flex justify-end gap-3">
+          <div className="p-6 bg-gray-50/50 border-t border-gray-100 flex justify-end gap-3 w-full">
             {footer}
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

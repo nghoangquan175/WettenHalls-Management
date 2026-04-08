@@ -9,6 +9,7 @@ export interface IUser extends Document {
   email: string;
   password?: string;
   role: UserRole;
+  permissions: string[];
   status: 'ACTIVE' | 'INACTIVE' | 'PENDING';
   createdAt: Date;
   matchPassword(password: string): Promise<boolean>;
@@ -19,8 +20,27 @@ const UserSchema: Schema = new Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, enum: USER_ROLES, default: 'GUEST' },
+  permissions: { type: [String], enum: ['CREATE', 'VIEW', 'PUBLISH_TOGGLE', 'EDIT', 'DELETE'], default: ['VIEW'] },
   status: { type: String, enum: ['ACTIVE', 'INACTIVE', 'PENDING'], default: 'ACTIVE' },
   createdAt: { type: Date, default: Date.now }
+}, {
+  timestamps: true,
+  toJSON: {
+    virtuals: true,
+    versionKey: false,
+    transform: function (doc, ret: any) {
+      ret.id = ret._id;
+      delete ret._id;
+    }
+  },
+  toObject: {
+    virtuals: true,
+    versionKey: false,
+    transform: function (doc, ret: any) {
+      ret.id = ret._id;
+      delete ret._id;
+    }
+  }
 });
 
 // Method to compare entered password with hashed password in database

@@ -4,6 +4,7 @@ export interface DashboardStats {
   superAdminCount?: number;
   adminCount?: number;
   articleCount: number;
+  publishedArticleCount: number;
   activeSessions: number;
 }
 
@@ -19,6 +20,7 @@ export interface UserData {
   name: string;
   email: string;
   role: 'ADMIN' | 'GUEST' | 'SUPER_ADMIN';
+  permissions: string[];
   status: 'ACTIVE' | 'INACTIVE' | 'PENDING';
   createdAt: string;
 }
@@ -63,6 +65,13 @@ export const adminService = {
   deleteUser: async (id: string) => {
     return apiRequest<any>(`/users/${id}`, {
       method: "DELETE"
+    });
+  },
+
+  updateUserPermissions: async (id: string, permissions: string[]) => {
+    return apiRequest<any>(`/users/${id}/permissions`, {
+      method: "PATCH",
+      body: { permissions }
     });
   }
 };

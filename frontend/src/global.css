@@ -13,3 +13,72 @@
     @apply cursor-pointer;
   }
 }
+
+@layer utilities {
+  .prose {
+    font-size: var(--font-size-m);
+    line-height: var(--line-height-m);
+    color: #374151;
+  }
+
+  .prose h1 {
+    font-size: var(--font-size-xxl);
+    line-height: var(--line-height-xxl);
+    font-weight: 700;
+    color: #111827;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    font-family: inherit;
+  }
+
+  .prose h2 {
+    font-size: var(--font-size-xl);
+    line-height: var(--line-height-xl);
+    font-weight: 700;
+    color: #111827;
+    margin-top: 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .prose h3 {
+    font-size: var(--font-size-l);
+    line-height: var(--line-height-l);
+    font-weight: 700;
+    color: #111827;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .prose p {
+    margin-bottom: 1rem;
+  }
+
+  .prose ul {
+    list-style-type: disc;
+    padding-left: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .prose ol {
+    list-style-type: decimal;
+    padding-left: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .prose li {
+    margin-bottom: 0.25rem;
+  }
+
+  /* Tiptap Editor Specific Styles */
+  .ProseMirror {
+    outline: none;
+  }
+
+  .ProseMirror p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    color: #9ca3af;
+    pointer-events: none;
+    height: 0;
+  }
+}

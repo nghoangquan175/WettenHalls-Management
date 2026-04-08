@@ -8,6 +8,7 @@ export interface NavItem {
   path: string; // This will now be the base path (e.g., "user")
   icon: ElementType;
   roles: UserRole[];
+  permissions?: string[];
 }
 
 export const NAV_ITEMS: NavItem[] = [

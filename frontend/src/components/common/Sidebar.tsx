@@ -6,10 +6,12 @@ import { Button } from "../ui/Button/Button";
 import { cn } from "../../utils/cn";
 import { useAuth } from "../../contexts/AuthContext";
 import { formatRoleName } from "../../utils/format";
+import { ConfirmModal } from "../ui/Modal/ConfirmModal";
 
 const Sidebar = () => {
   const { user, logout } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   if (!user) return null;
 
@@ -19,12 +21,21 @@ const Sidebar = () => {
       await logout();
     } finally {
       setIsLoggingOut(false);
+      setShowLogoutConfirm(false);
     }
   };
 
   const filteredNavItems = useMemo(
-    () => NAV_ITEMS.filter((item) => item.roles.includes(user.role)),
-    [user.role]
+    () => NAV_ITEMS.filter((item) => {
+      if (!item.roles.includes(user.role)) return false;
+      if (item.permissions && item.permissions.length > 0) {
+        if (user.role === 'ADMIN') {
+          return item.permissions.some(p => user.permissions?.includes(p));
+        }
+      }
+      return true;
+    }),
+    [user]
   );
 
   const prefix = getRolePrefix(user.role);
@@ -92,13 +103,25 @@ const Sidebar = () => {
         <Button
           variant="danger"
           className="w-full justify-start gap-3 h-11"
-          onClick={handleLogout}
+          onClick={() => setShowLogoutConfirm(true)}
           isLoading={isLoggingOut}
           leftIcon={<LogOut className="w-4 h-4" />}
         >
           {isLoggingOut ? "Logging out..." : "Logout"}
         </Button>
       </div>
+
+      <ConfirmModal
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={handleLogout}
+        title="Đăng xuất"
+        message="Bạn có chắc chắn muốn đăng xuất khỏi hệ thống không?"
+        confirmText="Đăng xuất"
+        cancelText="Hủy"
+        variant="danger"
+        isLoading={isLoggingOut}
+      />
     </aside>
   );
 };

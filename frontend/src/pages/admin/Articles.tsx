@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, Trash2, Edit2, ChevronDown, ChevronUp, CheckCircle, XCircle } from "lucide-react";
+import { Plus, Search, Trash2, Edit2, ChevronDown, ChevronUp, CheckCircle, XCircle, Eye, Send, RotateCcw } from "lucide-react";
 import { Button } from "../../components/ui/Button/Button";
 import DataTable, { type Column } from "../../components/common/DataTable";
 import { cn } from "../../utils/cn";
@@ -24,7 +24,7 @@ const Articles = () => {
   
   const debouncedSearch = useDebounce(searchTerm, 500);
   const queryClient = useQueryClient();
-  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+
   const rolePrefix = getRolePrefix(user?.role || 'ADMIN');
   
   const { 
@@ -55,6 +55,16 @@ const Articles = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articles'] });
       handleCloseModals();
+    },
+    onError: (error: any) => {
+      const msg = error.message || '';
+      if (msg.includes('thu hồi') || msg.includes('ARTICLE_REVOKED')) {
+        alert("Bài viết này đã được Admin thu hồi hoặc đang ở trạng thái Nháp. Hệ thống sẽ cập nhật lại danh sách.");
+        queryClient.invalidateQueries({ queryKey: ['articles'] });
+      } else {
+        alert(msg || "Có lỗi xảy ra khi cập nhật trạng thái.");
+      }
+      handleCloseModals();
     }
   });
 
@@ -82,7 +92,7 @@ const Articles = () => {
             />
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="ContentMMedium text-gray-900 truncate leading-tight group-hover:text-primary transition-colors cursor-pointer block" onClick={() => navigate(`${rolePrefix}/article/${article.id}/edit`)}>
+            <span className="ContentMMedium text-gray-900 truncate leading-tight group-hover:text-primary transition-colors cursor-pointer block">
               {article.title}
             </span>
             <span className="ContentSMedium text-gray-400 mt-0.5 line-clamp-1 max-w-full">{article.description}</span>
@@ -165,23 +175,83 @@ const Articles = () => {
         header: "Actions",
         accessor: (article) => (
           <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-            {(article.status === 'PENDING' || article.status === 'DRAFT' || article.status === 'UNPUBLISHED') && (
-                <ActionButton 
-                  icon={<CheckCircle className="w-4 h-4" />}
-                  variant="success"
-                  tooltip="Publish"
-                  onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('PUBLISHED'); }}
-                />
+            <ActionButton 
+              icon={<Eye className="w-4 h-4" />}
+              variant="default"
+              tooltip="Preview"
+              onClick={() => window.open(`${rolePrefix}/article/${article.id}/preview`, '_blank')}
+            />
+            
+            {/* SUPER ADMIN Status Actions */}
+            {user?.role === 'SUPER_ADMIN' && ['PENDING', 'DRAFT', 'UNPUBLISHED'].includes(article.status) && (
+              <ActionButton 
+                icon={<CheckCircle className="w-4 h-4" />}
+                variant="success"
+                tooltip="Approve / Publish"
+                onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('PUBLISHED'); }}
+              />
             )}
-            {article.status === 'PUBLISHED' && (
-                <ActionButton 
-                  icon={<XCircle className="w-4 h-4" />}
-                  variant="warning"
-                  tooltip="Unpublish"
-                  onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('UNPUBLISHED'); }}
-                />
+            {user?.role === 'SUPER_ADMIN' && article.status === 'PENDING' && (
+              <ActionButton 
+                icon={<XCircle className="w-4 h-4" />}
+                variant="warning"
+                tooltip="Reject to Draft"
+                onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('DRAFT'); }}
+              />
             )}
-            {(article.status === 'DRAFT' || article.status === 'UNPUBLISHED') && (
+            {user?.role === 'SUPER_ADMIN' && article.status === 'PUBLISHED' && (
+              <ActionButton 
+                icon={<XCircle className="w-4 h-4" />}
+                variant="warning"
+                tooltip="Unpublish"
+                onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('UNPUBLISHED'); }}
+              />
+            )}
+
+            {/* ADMIN PUBLISH_TOGGLE Actions */}
+            {user?.role === 'ADMIN' && user?.permissions?.includes('PUBLISH_TOGGLE') && (
+              <>
+                {article.status === 'PUBLISHED' && (
+                  <ActionButton 
+                    icon={<XCircle className="w-4 h-4" />}
+                    variant="warning"
+                    tooltip="Gỡ bài"
+                    onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('UNPUBLISHED'); }}
+                  />
+                )}
+                {article.status === 'UNPUBLISHED' && (
+                  <ActionButton 
+                    icon={<CheckCircle className="w-4 h-4" />}
+                    variant="success"
+                    tooltip="Đăng lại"
+                    onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('PUBLISHED'); }}
+                  />
+                )}
+              </>
+            )}
+            
+            {/* ADMIN Status Actions */}
+            {user?.role === 'ADMIN' && article.status === 'DRAFT' && article.poster.id === user?.id && (
+               <ActionButton 
+                 icon={<Send className="w-4 h-4" />}
+                 variant="default"
+                 tooltip="Send Request"
+                 onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('PENDING'); }}
+               />
+            )}
+            {user?.role === 'ADMIN' && article.status === 'PENDING' && article.poster.id === user?.id && (
+               <ActionButton 
+                 icon={<RotateCcw className="w-4 h-4" />}
+                 variant="warning"
+                 tooltip="Revoke Request"
+                 onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('DRAFT'); }}
+               />
+            )}
+
+            {/* Edit Action */}
+            {((user?.role === 'SUPER_ADMIN' && article.status !== 'PUBLISHED') || 
+              (user?.role === 'ADMIN' && article.status === 'DRAFT' && article.poster.id === user?.id) ||
+              (user?.role === 'ADMIN' && article.status === 'UNPUBLISHED' && user?.permissions?.includes('EDIT'))) && (
                 <ActionButton 
                   icon={<Edit2 className="w-4 h-4" />}
                   variant="default"
@@ -190,9 +260,11 @@ const Articles = () => {
                 />
             )}
             
-            {((user?.role === 'SUPER_ADMIN' 
-                ? (article.poster.id === user?.id ? ['DRAFT', 'UNPUBLISHED'].includes(article.status) : article.status === 'UNPUBLISHED')
-                : (article.poster.id === user?.id && article.status === 'DRAFT'))) && (
+            {/* Move to Trash Action */}
+            {(article.status !== 'PUBLISHED' && (
+              (article.status === 'DRAFT' && article.poster.id === user?.id) ||
+              (article.status === 'UNPUBLISHED' && (user?.role === 'SUPER_ADMIN' || user?.permissions?.includes('DELETE')))
+            )) && (
                 <ActionButton 
                   icon={<Trash2 className="w-4 h-4" />}
                   variant="danger"
@@ -214,14 +286,16 @@ const Articles = () => {
           <h2 className="DisplayLBold text-gray-900">Article Management</h2>
           <p className="ContentMRegular text-gray-400 mt-1">Manage, review, and publish your content.</p>
         </div>
-        <Button 
-          variant="primary" 
-          size="md" 
-          leftIcon={<Plus className="w-5 h-5" />}
-          onClick={() => navigate(`${rolePrefix}/article/create`)}
-        >
-           New Article
-        </Button>
+        {(user?.role === 'SUPER_ADMIN' || user?.permissions.includes('CREATE')) && (
+          <Button 
+            variant="primary" 
+            size="md" 
+            leftIcon={<Plus className="w-5 h-5" />}
+            onClick={() => navigate(`${rolePrefix}/article/create`)}
+          >
+             New Article
+          </Button>
+        )}
       </div>
 
       {/* Filters Bar */}
@@ -266,9 +340,25 @@ const Articles = () => {
         isOpen={actionType === 'status' && !!targetStatus}
         onClose={handleCloseModals}
         onConfirm={() => selectedArticle && targetStatus && statusMutation.mutate({ id: selectedArticle.id, status: targetStatus })}
-        title={targetStatus === 'PUBLISHED' ? 'Publish Article' : 'Unpublish Article'}
-        message={`Confirm changing status of "${selectedArticle?.title}" to ${targetStatus}?`}
-        confirmText={targetStatus === 'PUBLISHED' ? 'Publish' : 'Unpublish'}
+        title={
+          targetStatus === 'PUBLISHED' 
+            ? (selectedArticle?.status === 'UNPUBLISHED' ? 'Đăng bài trở lại' : 'Publish Article') 
+            : (targetStatus === 'UNPUBLISHED' ? 'Tạm gỡ bài viết' : 'Unpublish Article')
+        }
+        message={
+          targetStatus === 'PUBLISHED' 
+            ? (selectedArticle?.status === 'UNPUBLISHED' 
+                ? `Bạn có chắc chắn muốn đăng lại bài viết "${selectedArticle?.title}" không?` 
+                : `Confirm changing status of "${selectedArticle?.title}" to PUBLISHED?`) 
+            : (targetStatus === 'UNPUBLISHED' 
+                ? `Bạn có chắc chắn muốn tạm gỡ bài viết "${selectedArticle?.title}" khỏi trang công khai?` 
+                : `Confirm changing status of "${selectedArticle?.title}" to ${targetStatus}?`)
+        }
+        confirmText={
+          targetStatus === 'PUBLISHED' 
+            ? (selectedArticle?.status === 'UNPUBLISHED' ? 'Đăng lại' : 'Publish') 
+            : (targetStatus === 'UNPUBLISHED' ? 'Tạm gỡ' : 'Unpublish')
+        }
         variant={targetStatus === 'PUBLISHED' ? 'success' : 'warning'}
         isLoading={statusMutation.isPending}
       />

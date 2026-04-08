@@ -2,8 +2,7 @@ import { useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { formatRoleName } from "../../utils/format";
 import StatsCard from "../../components/common/StatsCard";
-import { Users, FileText, UserCheck, ShieldCheck, ArrowRight } from "lucide-react";
-import { Button } from "../../components/ui/Button/Button";
+import { Users, FileText, ShieldCheck, ArrowRight } from "lucide-react";
 import { adminService } from "../../services/adminService";
 import { useQuery } from "@tanstack/react-query";
 import { ApiError } from "../../services/api";
@@ -39,16 +38,16 @@ const Dashboard = () => {
       variant: "success" as const,
     },
     {
-      label: "Total Articles",
+      label: "Total visible Articles",
       value: stats?.articleCount,
       icon: FileText,
       variant: "warning" as const,
     },
     {
-      label: "Active Sessions",
-      value: stats?.activeSessions,
-      icon: UserCheck,
-      variant: "primary" as const,
+      label: "Published Articles",
+      value: stats?.publishedArticleCount,
+      icon: ShieldCheck,
+      variant: "success" as const,
     }
   ].filter(card => card.value !== undefined);
 
@@ -62,12 +61,6 @@ const Dashboard = () => {
             You're logged in as <span className="ContentMBold text-primary uppercase">{roleName}</span>. 
             Here's what's happening today.
           </p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="outline" size="md">View Reports</Button>
-          <Button variant="primary" size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>
-            Manage Content
-          </Button>
         </div>
       </header>
 

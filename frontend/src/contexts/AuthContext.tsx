@@ -7,6 +7,7 @@ interface AuthUser {
   id: string;
   name: string;
   role: UserRole;
+  permissions: string[];
   isAuthenticated: boolean;
 }
 
@@ -15,7 +16,7 @@ interface AuthContextType {
   isInitializing: boolean;
   connectionError: boolean;
   authError: string | null;
-  login: (userData: { id: string; name: string; role: UserRole }) => void;
+  login: (userData: { id: string; name: string; role: UserRole; permissions?: string[] }) => void;
   logout: () => Promise<void>;
   clearAuthError: () => void;
   triggerAuthError: (message: string) => void;
@@ -37,6 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           id: userData.id,
           name: userData.name,
           role: userData.role as UserRole,
+          permissions: userData.permissions || [],
           isAuthenticated: true,
         });
       } catch (err) {
@@ -59,8 +61,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     checkSession();
   }, []);
 
-  const login = (userData: { id: string; name: string; role: UserRole }) => {
-    setUser({ ...userData, isAuthenticated: true });
+  const login = (userData: { id: string; name: string; role: UserRole; permissions?: string[] }) => {
+    setUser({ ...userData, permissions: userData.permissions || [], isAuthenticated: true });
     setConnectionError(false);
     setAuthError(null);
   };

@@ -2,7 +2,7 @@ import { apiRequest } from './api';
 
 export interface LoginResponse {
   message: string;
-  user: { id: string; name: string; role: string; email: string };
+  user: { id: string; name: string; role: string; email: string; permissions: string[] };
 }
 
 export const authService = {
@@ -16,5 +16,5 @@ export const authService = {
     apiRequest('/auth/logout', { method: 'POST' }),
 
   getMe: () =>
-    apiRequest<{ id: string; name: string; role: string; email: string }>('/auth/me'),
+    apiRequest<{ id: string; name: string; role: string; email: string; permissions: string[] }>('/auth/me'),
 };

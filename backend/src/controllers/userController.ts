@@ -7,18 +7,54 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<vo
     const userRole = req.session.user?.role;
     const isSuperAdmin = userRole === 'SUPER_ADMIN';
     
-    // Basic stats visible to both roles
-    const articleCount = await Article.countDocuments({ isDeleted: { $ne: true } });
-    const publishedArticleCount = await Article.countDocuments({ 
-      status: 'PUBLISHED', 
-      isDeleted: { $ne: true } 
-    });
-    const activeSessions = 1; 
+    const userId = req.session.user?.id;
+    const userPermissions = req.session.user?.permissions || [];
+
+    // Base query for non-deleted articles
+    let baseQuery: any = { isDeleted: { $ne: true } };
+
+    // Apply Visibility Logic
+    if (userRole !== 'SUPER_ADMIN') {
+      if (!userPermissions.includes('VIEW')) {
+        // No VIEW permission: only count own articles
+        baseQuery.poster = userId;
+      } else {
+        // Has VIEW permission: count all except others' drafts
+        baseQuery = {
+          $and: [
+            baseQuery,
+            {
+              $or: [
+                { status: { $in: ['PENDING', 'PUBLISHED', 'UNPUBLISHED'] } },
+                { poster: userId }
+              ]
+            }
+          ]
+        };
+      }
+    }
+
+    const articleCount = await Article.countDocuments(baseQuery);
+    
+    // Published count: combine base visibility query with status: 'PUBLISHED'
+    const publishedQuery = { 
+      ...baseQuery,
+      status: 'PUBLISHED'
+    };
+    
+    // If baseQuery had an $and (from VIEW permission), we need to be careful with spreading
+    let finalPublishedQuery = publishedQuery;
+    if (baseQuery.$and) {
+        finalPublishedQuery = {
+            $and: [...baseQuery.$and, { status: 'PUBLISHED' }]
+        };
+    }
+
+    const publishedArticleCount = await Article.countDocuments(finalPublishedQuery);
 
     const stats: any = {
       articleCount,
-      publishedArticleCount,
-      activeSessions
+      publishedArticleCount
     };
 
     // Only fetch and return user counts for SUPER_ADMIN
@@ -53,7 +89,8 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       name,
       email,
       password,
-      role
+      role,
+      permissions: ['VIEW'] // default permission
     });
 
     if (user) {
@@ -103,6 +140,7 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
         name: user.name,
         email: user.email,
         role: user.role,
+        permissions: user.permissions || [],
         status: user.status || 'ACTIVE',
         createdAt: user.createdAt.toISOString().split('T')[0]
       })),
@@ -171,5 +209,44 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
     res.status(200).json({ message: 'User deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Server error while deleting user' });
+  }
+};
+
+export const updateUserPermissions = async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const { permissions } = req.body;
+
+  try {
+    if (!Array.isArray(permissions)) {
+      res.status(400).json({ message: 'Permissions must be an array' });
+      return;
+    }
+
+    const validPermissions = ['VIEW', 'CREATE', 'PUBLISH_TOGGLE', 'EDIT', 'DELETE'];
+    const invalidPermissions = permissions.filter(p => !validPermissions.includes(p));
+
+    if (invalidPermissions.length > 0) {
+      res.status(400).json({ message: `Quyền không hợp lệ: ${invalidPermissions.join(', ')}` });
+      return;
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    // Prevent modifying super admin permissions entirely
+    if (user.role === 'SUPER_ADMIN') {
+      res.status(403).json({ message: 'Không thể chỉnh sửa quyền hạn của SUPER_ADMIN' });
+      return;
+    }
+
+    user.permissions = permissions;
+    await user.save();
+
+    res.status(200).json({ message: 'Permissions updated successfully', permissions: user.permissions });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error while updating permissions' });
   }
 };

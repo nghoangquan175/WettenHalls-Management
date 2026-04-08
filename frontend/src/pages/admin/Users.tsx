@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { UserPlus, Search, Trash2, Power, PowerOff, Mail, Shield, ChevronDown, ChevronUp } from "lucide-react";
+import { UserPlus, Search, Trash2, Power, PowerOff, Mail, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "../../components/ui/Button/Button";
 import DataTable, { type Column } from "../../components/common/DataTable";
 import { cn } from "../../utils/cn";
@@ -72,6 +72,14 @@ const Users = () => {
     }
   });
 
+  const permissionsMutation = useMutation({
+    mutationFn: ({ id, permissions }: { id: string, permissions: string[] }) => 
+      adminService.updateUserPermissions(id, permissions),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    }
+  });
+
   const columns: Column<UserData>[] = [
     {
       header: "User",
@@ -90,23 +98,7 @@ const Users = () => {
         </div>
       ),
     },
-    {
-      header: "Role",
-      accessor: (user) => (
-        <div className="flex items-center gap-1.5">
-          <Shield className={cn(
-            "w-3.5 h-3.5",
-            user.role === "SUPER_ADMIN" ? "text-red-500" : "text-primary"
-          )} />
-          <span className={cn(
-            "ContentSMedium uppercase",
-            user.role === "SUPER_ADMIN" ? "text-red-500" : "text-gray-600"
-          )}>
-            {user.role}
-          </span>
-        </div>
-      ),
-    },
+
     {
       header: (
         <div className="relative group/filter">
@@ -165,6 +157,92 @@ const Users = () => {
       ),
       accessor: "createdAt",
       className: "tabular-nums"
+    },
+    {
+       header: "Permissions",
+       accessor: (user) => (
+         <div className="flex flex-wrap gap-2 items-center" onClick={(e) => e.stopPropagation()}>
+           <label className="flex items-center gap-1.5 cursor-pointer group">
+             <input 
+               type="checkbox" 
+               className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary accent-primary" 
+               checked={user.permissions?.includes('CREATE')}
+               disabled={permissionsMutation.isPending || user.role === 'SUPER_ADMIN'}
+               onChange={(e) => {
+                 const newPerms = e.target.checked 
+                   ? [...(user.permissions || []), 'CREATE']
+                   : (user.permissions || []).filter(p => p !== 'CREATE');
+                 permissionsMutation.mutate({ id: user.id, permissions: newPerms });
+               }}
+             />
+             <span className="text-[11px] font-bold text-gray-500 group-hover:text-primary transition-colors uppercase">CREATE</span>
+           </label>
+           
+           <label className="flex items-center gap-1.5 cursor-pointer group">
+             <input 
+               type="checkbox" 
+               className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary accent-primary"
+               checked={user.permissions?.includes('VIEW')}
+               disabled={permissionsMutation.isPending || user.role === 'SUPER_ADMIN'}
+               onChange={(e) => {
+                 const newPerms = e.target.checked 
+                   ? [...(user.permissions || []), 'VIEW']
+                   : (user.permissions || []).filter(p => p !== 'VIEW');
+                 permissionsMutation.mutate({ id: user.id, permissions: newPerms });
+               }}
+             />
+             <span className="text-[11px] font-bold text-gray-500 group-hover:text-primary transition-colors uppercase">VIEW</span>
+           </label>
+
+           <label className="flex items-center gap-1.5 cursor-pointer group">
+             <input 
+               type="checkbox" 
+               className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary accent-primary"
+               checked={user.permissions?.includes('PUBLISH_TOGGLE')}
+               disabled={permissionsMutation.isPending || user.role === 'SUPER_ADMIN'}
+               onChange={(e) => {
+                 const newPerms = e.target.checked 
+                   ? [...(user.permissions || []), 'PUBLISH_TOGGLE']
+                   : (user.permissions || []).filter(p => p !== 'PUBLISH_TOGGLE');
+                 permissionsMutation.mutate({ id: user.id, permissions: newPerms });
+               }}
+             />
+             <span className="text-[11px] font-bold text-gray-500 group-hover:text-primary transition-colors uppercase">REPUBLISH</span>
+           </label>
+
+           <label className="flex items-center gap-1.5 cursor-pointer group">
+             <input 
+               type="checkbox" 
+               className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary accent-primary"
+               checked={user.permissions?.includes('EDIT')}
+               disabled={permissionsMutation.isPending || user.role === 'SUPER_ADMIN'}
+               onChange={(e) => {
+                 const newPerms = e.target.checked 
+                   ? [...(user.permissions || []), 'EDIT']
+                   : (user.permissions || []).filter(p => p !== 'EDIT');
+                 permissionsMutation.mutate({ id: user.id, permissions: newPerms });
+               }}
+             />
+             <span className="text-[11px] font-bold text-gray-500 group-hover:text-primary transition-colors uppercase">EDIT</span>
+           </label>
+
+           <label className="flex items-center gap-1.5 cursor-pointer group">
+             <input 
+               type="checkbox" 
+               className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary accent-primary"
+               checked={user.permissions?.includes('DELETE')}
+               disabled={permissionsMutation.isPending || user.role === 'SUPER_ADMIN'}
+               onChange={(e) => {
+                 const newPerms = e.target.checked 
+                   ? [...(user.permissions || []), 'DELETE']
+                   : (user.permissions || []).filter(p => p !== 'DELETE');
+                 permissionsMutation.mutate({ id: user.id, permissions: newPerms });
+               }}
+             />
+             <span className="text-[11px] font-bold text-gray-500 group-hover:text-primary transition-colors uppercase">DELETE</span>
+           </label>
+         </div>
+       )
     },
     {
       header: "Actions",

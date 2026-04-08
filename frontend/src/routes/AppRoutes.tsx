@@ -15,10 +15,12 @@ import Articles from '../pages/admin/Articles';
 import ArticleForm from '../pages/admin/ArticleForm';
 import Trash from '../pages/admin/Trash';
 import Settings from '../pages/admin/Settings';
-
+import ArticlePreview from '../pages/admin/ArticlePreview';
 export const AppRoutes = () => {
   const { user, isInitializing } = useAuth();
   const [showSlowConnection, setShowSlowConnection] = useState(false);
+  
+  const hasCreatePermission = user?.role === 'SUPER_ADMIN' || user?.permissions?.includes('CREATE');
 
   useEffect(() => {
     let timeout: any;
@@ -61,6 +63,14 @@ export const AppRoutes = () => {
 
       {/* Super Admin Protected Routes */}
       <Route
+        path="/super-admin/article/:id/preview"
+        element={
+          <AuthGuard allowedRoles={["SUPER_ADMIN"]}>
+            <ArticlePreview />
+          </AuthGuard>
+        }
+      />
+      <Route
         path="/super-admin"
         element={
           <AuthGuard allowedRoles={["SUPER_ADMIN"]}>
@@ -75,10 +85,18 @@ export const AppRoutes = () => {
         <Route path="article/:id/edit" element={<ArticleForm />} />
         <Route path="trash" element={<Trash />} />
         <Route path="setting" element={<Settings />} />
-        <Route path="*" element={<Navigate to="" replace />} />
+        <Route path="*" element={<Navigate to="/404" replace />} />
       </Route>
 
       {/* Admin Protected Routes */}
+      <Route
+        path="/admin/article/:id/preview"
+        element={
+          <AuthGuard allowedRoles={["ADMIN"]}>
+            <ArticlePreview />
+          </AuthGuard>
+        }
+      />
       <Route
         path="/admin"
         element={
@@ -89,15 +107,16 @@ export const AppRoutes = () => {
       >
         <Route index element={<Dashboard />} />
         <Route path="article" element={<Articles />} />
-        <Route path="article/create" element={<ArticleForm />} />
+        {hasCreatePermission && <Route path="article/create" element={<ArticleForm />} />}
         <Route path="article/:id/edit" element={<ArticleForm />} />
         <Route path="trash" element={<Trash />} />
         <Route path="setting" element={<Settings />} />
-        <Route path="*" element={<Navigate to="" replace />} />
+        <Route path="*" element={<Navigate to="/404" replace />} />
       </Route>
 
       {/* Default Redirects */}
       <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/404" element={<NotFoundPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

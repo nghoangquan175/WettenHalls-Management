@@ -8,11 +8,17 @@ import {
     updateArticleStatus,
     getTrash,
     restoreArticle,
-    permanentDelete
+    permanentDelete,
+    getPublishedArticles,
+    getArticleBySlug
 } from '../controllers/articleController';
 import { isAuthenticated, authorizeRoles } from '../middleware/authMiddleware';
 
 const router = Router();
+ 
+// Public Routes
+router.get('/published', getPublishedArticles);
+router.get('/public/:slug', getArticleBySlug);
 
 // Get list and single article (All authenticated staff)
 router.get('/', isAuthenticated, getArticles);
@@ -23,8 +29,8 @@ router.get('/:id', isAuthenticated, getArticleById);
 router.post('/', isAuthenticated, createArticle);
 router.put('/:id', isAuthenticated, updateArticle);
 
-// Status management (SUPER_ADMIN only)
-router.patch('/:id/status', isAuthenticated, authorizeRoles('SUPER_ADMIN'), updateArticleStatus);
+// Status management (Both SA and ADMIN)
+router.patch('/:id/status', isAuthenticated, updateArticleStatus);
 
 // Soft Delete, Restore, and Permanent Delete
 router.delete('/:id', isAuthenticated, deleteArticle);

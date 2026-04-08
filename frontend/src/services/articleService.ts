@@ -15,7 +15,12 @@ export interface ArticleData {
   status: 'DRAFT' | 'PENDING' | 'PUBLISHED' | 'UNPUBLISHED';
   isDeleted?: boolean;
   deletedAt?: string;
-  deletedBy?: string;
+  deletedBy?: {
+    _id?: string;
+    id?: string;
+    name: string;
+    email: string;
+  };
   createdAt: string;
   updatedAt: string;
 }

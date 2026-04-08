@@ -32,6 +32,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
         name: user.name,
         email: user.email,
         role: user.role as 'SUPER_ADMIN' | 'ADMIN' | 'GUEST',
+        permissions: user.permissions || [],
       };
 
       res.status(200).json({
@@ -86,6 +87,7 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
       name: user.name,
       email: user.email,
       role: user.role,
+      permissions: user.permissions || [],
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
