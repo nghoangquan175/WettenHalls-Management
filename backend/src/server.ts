@@ -32,6 +32,7 @@ app.use(
     credentials: true, // Allow cookies
   })
 );
+
 app.use(express.json());
 
 // Session Middleware Instances
