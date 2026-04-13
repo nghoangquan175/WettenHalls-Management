@@ -8,6 +8,7 @@ import userRoutes from './routes/userRoutes';
 import authRoutes from './routes/authRoutes';
 import articleRoutes from './routes/articleRoutes';
 import uploadRoutes from './routes/uploadRoutes';
+import navigationRoutes from './routes/navigationRoutes';
 import { errorHandler } from './middleware/errorHandler';
 
 dotenv.config();
@@ -31,13 +32,14 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Session Configuration
-app.use(session({
+// Session Middleware Instances
+const createSessionMiddleware = (name: string) => session({
+  name,
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/management_db',
+    mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/WettenHalls',
     collectionName: 'sessions',
   }),
   cookie: {
@@ -45,13 +47,33 @@ app.use(session({
     secure: false, // Set to true if using HTTPS
     httpOnly: true,
   }
-}));
+});
+
+const managementSession = createSessionMiddleware('management.sid');
+const homepageSession = createSessionMiddleware('homepage.sid');
+
+// Dynamic Session Selection Middleware
+app.use((req: Request, res: Response, next) => {
+  const origin = req.headers.origin;
+  const managementOrigin = process.env.MANAGEMENT_ORIGIN || 'http://localhost:5173';
+  const homepageOrigin = process.env.HOMEPAGE_ORIGIN || 'http://localhost:6699';
+
+  if (origin === managementOrigin) {
+    return managementSession(req, res, next);
+  } else if (origin === homepageOrigin) {
+    return homepageSession(req, res, next);
+  }
+  
+  // Default to management if unknown or not provided
+  managementSession(req, res, next);
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/articles', articleRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/navigation', navigationRoutes);
 
 app.get('/', (req: Request, res: Response) => {
   res.json({

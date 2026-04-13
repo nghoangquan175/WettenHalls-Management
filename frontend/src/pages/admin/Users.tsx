@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { UserPlus, Search, Trash2, Power, PowerOff, Mail, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "../../components/ui/Button/Button";
 import DataTable, { type Column } from "../../components/common/DataTable";
@@ -73,14 +73,46 @@ const Users = () => {
   });
 
   const permissionsMutation = useMutation({
-    mutationFn: ({ id, permissions }: { id: string, permissions: string[] }) => 
+    mutationFn: ({ id, permissions }: { id: string, permissions: string[], permissionType: string }) => 
       adminService.updateUserPermissions(id, permissions),
-    onSuccess: () => {
+    onMutate: async (newPermissions) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: ['users'] });
+
+      // Snapshot the previous value
+      const previousUsers = queryClient.getQueryData(['users']);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(['users'], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            users: page.users.map((user: UserData) => 
+              user.id === newPermissions.id 
+                ? { ...user, permissions: newPermissions.permissions } 
+                : user
+            )
+          }))
+        };
+      });
+
+      return { previousUsers };
+    },
+    onError: (err, newPermissions, context) => {
+      // Rollback to the previous value if mutation fails
+      if (context?.previousUsers) {
+        queryClient.setQueryData(['users'], context.previousUsers);
+      }
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure we have the correct data
       queryClient.invalidateQueries({ queryKey: ['users'] });
     }
   });
 
-  const columns: Column<UserData>[] = [
+  const columns = useMemo((): Column<UserData>[] => [
     {
       header: "User",
       accessor: (user) => (
@@ -160,89 +192,45 @@ const Users = () => {
     },
     {
        header: "Permissions",
-       accessor: (user) => (
-         <div className="flex flex-wrap gap-2 items-center" onClick={(e) => e.stopPropagation()}>
-           <label className="flex items-center gap-1.5 cursor-pointer group">
-             <input 
-               type="checkbox" 
-               className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary accent-primary" 
-               checked={user.permissions?.includes('CREATE')}
-               disabled={permissionsMutation.isPending || user.role === 'SUPER_ADMIN'}
-               onChange={(e) => {
-                 const newPerms = e.target.checked 
-                   ? [...(user.permissions || []), 'CREATE']
-                   : (user.permissions || []).filter(p => p !== 'CREATE');
-                 permissionsMutation.mutate({ id: user.id, permissions: newPerms });
-               }}
-             />
-             <span className="text-[11px] font-bold text-gray-500 group-hover:text-primary transition-colors uppercase">CREATE</span>
-           </label>
+       accessor: (user) => {
+         const mutationVars = permissionsMutation.variables as any;
+         const isUserUpdating = permissionsMutation.isPending && mutationVars?.id === user.id;
+
+         const renderCheckbox = (perm: string, label: string) => {
+           const isThisPermUpdating = isUserUpdating && mutationVars?.permissionType === perm;
            
-           <label className="flex items-center gap-1.5 cursor-pointer group">
-             <input 
-               type="checkbox" 
-               className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary accent-primary"
-               checked={user.permissions?.includes('VIEW')}
-               disabled={permissionsMutation.isPending || user.role === 'SUPER_ADMIN'}
-               onChange={(e) => {
-                 const newPerms = e.target.checked 
-                   ? [...(user.permissions || []), 'VIEW']
-                   : (user.permissions || []).filter(p => p !== 'VIEW');
-                 permissionsMutation.mutate({ id: user.id, permissions: newPerms });
-               }}
-             />
-             <span className="text-[11px] font-bold text-gray-500 group-hover:text-primary transition-colors uppercase">VIEW</span>
-           </label>
-
-           <label className="flex items-center gap-1.5 cursor-pointer group">
-             <input 
-               type="checkbox" 
-               className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary accent-primary"
-               checked={user.permissions?.includes('PUBLISH_TOGGLE')}
-               disabled={permissionsMutation.isPending || user.role === 'SUPER_ADMIN'}
-               onChange={(e) => {
-                 const newPerms = e.target.checked 
-                   ? [...(user.permissions || []), 'PUBLISH_TOGGLE']
-                   : (user.permissions || []).filter(p => p !== 'PUBLISH_TOGGLE');
-                 permissionsMutation.mutate({ id: user.id, permissions: newPerms });
-               }}
-             />
-             <span className="text-[11px] font-bold text-gray-500 group-hover:text-primary transition-colors uppercase">REPUBLISH</span>
-           </label>
-
-           <label className="flex items-center gap-1.5 cursor-pointer group">
-             <input 
-               type="checkbox" 
-               className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary accent-primary"
-               checked={user.permissions?.includes('EDIT')}
-               disabled={permissionsMutation.isPending || user.role === 'SUPER_ADMIN'}
-               onChange={(e) => {
-                 const newPerms = e.target.checked 
-                   ? [...(user.permissions || []), 'EDIT']
-                   : (user.permissions || []).filter(p => p !== 'EDIT');
-                 permissionsMutation.mutate({ id: user.id, permissions: newPerms });
-               }}
-             />
-             <span className="text-[11px] font-bold text-gray-500 group-hover:text-primary transition-colors uppercase">EDIT</span>
-           </label>
-
-           <label className="flex items-center gap-1.5 cursor-pointer group">
-             <input 
-               type="checkbox" 
-               className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary accent-primary"
-               checked={user.permissions?.includes('DELETE')}
-               disabled={permissionsMutation.isPending || user.role === 'SUPER_ADMIN'}
-               onChange={(e) => {
-                 const newPerms = e.target.checked 
-                   ? [...(user.permissions || []), 'DELETE']
-                   : (user.permissions || []).filter(p => p !== 'DELETE');
-                 permissionsMutation.mutate({ id: user.id, permissions: newPerms });
-               }}
-             />
-             <span className="text-[11px] font-bold text-gray-500 group-hover:text-primary transition-colors uppercase">DELETE</span>
-           </label>
-         </div>
-       )
+           return (
+            <label className={cn(
+              "flex items-center gap-1.5 cursor-pointer group transition-opacity",
+              isThisPermUpdating && "opacity-70"
+            )}>
+              <input 
+                type="checkbox" 
+                className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary accent-primary" 
+                checked={user.permissions?.includes(perm)}
+                disabled={isThisPermUpdating || user.role === 'SUPER_ADMIN'}
+                onChange={(e) => {
+                  const newPerms = e.target.checked 
+                    ? [...(user.permissions || []), perm]
+                    : (user.permissions || []).filter(p => p !== perm);
+                  permissionsMutation.mutate({ id: user.id, permissions: newPerms, permissionType: perm });
+                }}
+              />
+              <span className="text-[11px] font-bold text-gray-500 group-hover:text-primary transition-colors uppercase">{label}</span>
+            </label>
+           );
+         };
+         
+         return (
+          <div className="flex flex-wrap gap-2 items-center" onClick={(e) => e.stopPropagation()}>
+            {renderCheckbox('CREATE', 'CREATE')}
+            {renderCheckbox('VIEW', 'VIEW')}
+            {renderCheckbox('PUBLISH_TOGGLE', 'REPUBLISH')}
+            {renderCheckbox('EDIT', 'EDIT')}
+            {renderCheckbox('DELETE', 'DELETE')}
+          </div>
+        );
+       }
     },
     {
       header: "Actions",
@@ -266,7 +254,7 @@ const Users = () => {
       ),
       className: "text-right"
     }
-  ];
+  ], [statusFilter, sortOrder, permissionsMutation.isPending, permissionsMutation.variables]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">

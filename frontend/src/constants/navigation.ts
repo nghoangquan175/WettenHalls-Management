@@ -31,12 +31,6 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ["SUPER_ADMIN", "ADMIN"],
   },
   {
-    label: "Trash",
-    path: "trash",
-    icon: Trash2,
-    roles: ["SUPER_ADMIN", "ADMIN"],
-  },
-  {
     label: "Settings",
     path: "setting",
     icon: Settings,
@@ -47,9 +41,8 @@ export const NAV_ITEMS: NavItem[] = [
 export const getRolePrefix = (role: UserRole): string => {
   switch (role) {
     case "SUPER_ADMIN":
-      return "/super-admin";
     case "ADMIN":
-      return "/admin";
+      return "/users";
     default:
       return "";
   }

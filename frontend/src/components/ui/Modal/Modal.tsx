@@ -36,6 +36,11 @@ export const Modal: React.FC<ModalProps> = ({
       document.body.style.overflow = 'unset';
       return () => clearTimeout(timer);
     }
+
+    // Cleanup function to ensure overflow is reset on unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
   }, [isOpen]);
 
   if (!isRendered) return null;

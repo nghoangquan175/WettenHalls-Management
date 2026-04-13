@@ -5,9 +5,10 @@ import { getRolePrefix, type UserRole } from '../constants/navigation';
 interface AuthGuardProps {
   children: React.ReactNode;
   allowedRoles: UserRole[];
+  requirePermission?: string;
 }
 
-export const AuthGuard = ({ children, allowedRoles }: AuthGuardProps) => {
+export const AuthGuard = ({ children, allowedRoles, requirePermission }: AuthGuardProps) => {
   const { user } = useAuth();
   const location = useLocation();
 
@@ -16,6 +17,10 @@ export const AuthGuard = ({ children, allowedRoles }: AuthGuardProps) => {
   }
 
   if (!allowedRoles.includes(user.role)) {
+    return <Navigate to={getRolePrefix(user.role) || '/login'} replace />;
+  }
+
+  if (requirePermission && user.role !== 'SUPER_ADMIN' && !user.permissions?.includes(requirePermission)) {
     return <Navigate to={getRolePrefix(user.role) || '/login'} replace />;
   }
 

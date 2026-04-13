@@ -16,10 +16,10 @@ const Articles = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<ArticleData['status'] | 'ALL'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<ArticleData['status'] | 'ALL' | 'DELETED'>('ALL');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedArticle, setSelectedArticle] = useState<ArticleData | null>(null);
-  const [actionType, setActionType] = useState<'status' | 'delete' | null>(null);
+  const [actionType, setActionType] = useState<'status' | 'delete' | 'restore' | 'permanent' | null>(null);
   const [targetStatus, setTargetStatus] = useState<ArticleData['status'] | null>(null);
   
   const debouncedSearch = useDebounce(searchTerm, 500);
@@ -36,7 +36,9 @@ const Articles = () => {
   } = useInfiniteQuery({
     queryKey: ['articles', { search: debouncedSearch, status: statusFilter, sort: sortOrder }],
     queryFn: ({ pageParam = 1 }) => 
-      articleService.getArticles(debouncedSearch, statusFilter === 'ALL' ? undefined : statusFilter, sortOrder, pageParam as number),
+      statusFilter === 'DELETED' 
+        ? articleService.getTrash(debouncedSearch, pageParam as number)
+        : articleService.getArticles(debouncedSearch, statusFilter === 'ALL' ? undefined : statusFilter, sortOrder, pageParam as number),
     getNextPageParam: (lastPage) => lastPage.nextPage,
     initialPageParam: 1,
   });
@@ -70,6 +72,22 @@ const Articles = () => {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => articleService.deleteArticle(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+      handleCloseModals();
+    }
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: (id: string) => articleService.restoreArticle(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+      handleCloseModals();
+    }
+  });
+
+  const permanentDeleteMutation = useMutation({
+    mutationFn: (id: string) => articleService.permanentDeleteArticle(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articles'] });
       handleCloseModals();
@@ -119,7 +137,7 @@ const Articles = () => {
               id="status-filter-menu-article"
               className="hidden absolute top-full left-0 mt-2 w-40 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50 animate-in fade-in zoom-in-95 duration-200"
             >
-              {['ALL', 'DRAFT', 'PENDING', 'PUBLISHED', 'UNPUBLISHED'].map((status) => (
+              {['ALL', 'DRAFT', 'PENDING', 'PUBLISHED', 'UNPUBLISHED', 'DELETED'].map((status) => (
                 <button
                   key={status}
                   className={cn(
@@ -172,110 +190,131 @@ const Articles = () => {
         )
       },
       {
-        header: "Actions",
-        accessor: (article) => (
-          <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-            <ActionButton 
-              icon={<Eye className="w-4 h-4" />}
-              variant="default"
-              tooltip="Preview"
-              onClick={() => window.open(`${rolePrefix}/article/${article.id}/preview`, '_blank')}
-            />
-            
-            {/* SUPER ADMIN Status Actions */}
-            {user?.role === 'SUPER_ADMIN' && ['PENDING', 'DRAFT', 'UNPUBLISHED'].includes(article.status) && (
+      header: "Actions",
+      accessor: (article) => (
+        <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+          {statusFilter === 'DELETED' ? (
+            <>
               <ActionButton 
-                icon={<CheckCircle className="w-4 h-4" />}
+                icon={<RotateCcw className="w-4 h-4" />}
                 variant="success"
-                tooltip="Approve / Publish"
-                onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('PUBLISHED'); }}
+                tooltip="Restore"
+                onClick={() => { setSelectedArticle(article); setActionType('restore'); }}
+                isLoading={restoreMutation.isPending && selectedArticle?.id === article.id}
               />
-            )}
-            {user?.role === 'SUPER_ADMIN' && article.status === 'PENDING' && (
               <ActionButton 
-                icon={<XCircle className="w-4 h-4" />}
-                variant="warning"
-                tooltip="Reject to Draft"
-                onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('DRAFT'); }}
+                icon={<Trash2 className="w-4 h-4" />}
+                variant="danger"
+                tooltip="Delete Permanently"
+                onClick={() => { setSelectedArticle(article); setActionType('permanent'); }}
+                isLoading={permanentDeleteMutation.isPending && selectedArticle?.id === article.id}
               />
-            )}
-            {user?.role === 'SUPER_ADMIN' && article.status === 'PUBLISHED' && (
+            </>
+          ) : (
+            <>
               <ActionButton 
-                icon={<XCircle className="w-4 h-4" />}
-                variant="warning"
-                tooltip="Unpublish"
-                onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('UNPUBLISHED'); }}
+                icon={<Eye className="w-4 h-4" />}
+                variant="default"
+                tooltip="Preview"
+                onClick={() => window.open(`${rolePrefix}/article/${article.id}/preview`, '_blank')}
               />
-            )}
-
-            {/* ADMIN PUBLISH_TOGGLE Actions */}
-            {user?.role === 'ADMIN' && user?.permissions?.includes('PUBLISH_TOGGLE') && (
-              <>
-                {article.status === 'PUBLISHED' && (
-                  <ActionButton 
-                    icon={<XCircle className="w-4 h-4" />}
-                    variant="warning"
-                    tooltip="Gỡ bài"
-                    onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('UNPUBLISHED'); }}
-                  />
-                )}
-                {article.status === 'UNPUBLISHED' && (
-                  <ActionButton 
-                    icon={<CheckCircle className="w-4 h-4" />}
-                    variant="success"
-                    tooltip="Đăng lại"
-                    onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('PUBLISHED'); }}
-                  />
-                )}
-              </>
-            )}
-            
-            {/* ADMIN Status Actions */}
-            {user?.role === 'ADMIN' && article.status === 'DRAFT' && article.poster.id === user?.id && (
-               <ActionButton 
-                 icon={<Send className="w-4 h-4" />}
-                 variant="default"
-                 tooltip="Send Request"
-                 onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('PENDING'); }}
-               />
-            )}
-            {user?.role === 'ADMIN' && article.status === 'PENDING' && article.poster.id === user?.id && (
-               <ActionButton 
-                 icon={<RotateCcw className="w-4 h-4" />}
-                 variant="warning"
-                 tooltip="Revoke Request"
-                 onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('DRAFT'); }}
-               />
-            )}
-
-            {/* Edit Action */}
-            {((user?.role === 'SUPER_ADMIN' && article.status !== 'PUBLISHED') || 
-              (user?.role === 'ADMIN' && article.status === 'DRAFT' && article.poster.id === user?.id) ||
-              (user?.role === 'ADMIN' && article.status === 'UNPUBLISHED' && user?.permissions?.includes('EDIT'))) && (
+              
+              {/* SUPER ADMIN Status Actions */}
+              {user?.role === 'SUPER_ADMIN' && ['PENDING', 'DRAFT', 'UNPUBLISHED'].includes(article.status) && (
                 <ActionButton 
-                  icon={<Edit2 className="w-4 h-4" />}
-                  variant="default"
-                  tooltip="Edit"
-                  onClick={() => navigate(`${rolePrefix}/article/${article.id}/edit`)}
+                  icon={<CheckCircle className="w-4 h-4" />}
+                  variant="success"
+                  tooltip="Approve / Publish"
+                  onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('PUBLISHED'); }}
                 />
-            )}
-            
-            {/* Move to Trash Action */}
-            {(article.status !== 'PUBLISHED' && (
-              (article.status === 'DRAFT' && article.poster.id === user?.id) ||
-              (article.status === 'UNPUBLISHED' && (user?.role === 'SUPER_ADMIN' || user?.permissions?.includes('DELETE')))
-            )) && (
+              )}
+              {user?.role === 'SUPER_ADMIN' && article.status === 'PENDING' && (
                 <ActionButton 
-                  icon={<Trash2 className="w-4 h-4" />}
-                  variant="danger"
-                  tooltip="Move to Trash"
-                  onClick={() => { setSelectedArticle(article); setActionType('delete'); }}
+                  icon={<XCircle className="w-4 h-4" />}
+                  variant="warning"
+                  tooltip="Reject to Draft"
+                  onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('DRAFT'); }}
                 />
-            )}
-          </div>
-        ),
-        className: "text-right"
-      }
+              )}
+              {user?.role === 'SUPER_ADMIN' && article.status === 'PUBLISHED' && (
+                <ActionButton 
+                  icon={<XCircle className="w-4 h-4" />}
+                  variant="warning"
+                  tooltip="Unpublish"
+                  onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('UNPUBLISHED'); }}
+                />
+              )}
+
+              {/* ADMIN PUBLISH_TOGGLE Actions */}
+              {user?.role === 'ADMIN' && user?.permissions?.includes('PUBLISH_TOGGLE') && (
+                <>
+                  {article.status === 'PUBLISHED' && (
+                    <ActionButton 
+                      icon={<XCircle className="w-4 h-4" />}
+                      variant="warning"
+                      tooltip="Gỡ bài"
+                      onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('UNPUBLISHED'); }}
+                    />
+                  )}
+                  {article.status === 'UNPUBLISHED' && (
+                    <ActionButton 
+                      icon={<CheckCircle className="w-4 h-4" />}
+                      variant="success"
+                      tooltip="Đăng lại"
+                      onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('PUBLISHED'); }}
+                    />
+                  )}
+                </>
+              )}
+              
+              {/* ADMIN Status Actions */}
+              {user?.role === 'ADMIN' && article.status === 'DRAFT' && article.poster.id === user?.id && (
+                 <ActionButton 
+                   icon={<Send className="w-4 h-4" />}
+                   variant="default"
+                   tooltip="Send Request"
+                   onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('PENDING'); }}
+                 />
+              )}
+              {user?.role === 'ADMIN' && article.status === 'PENDING' && article.poster.id === user?.id && (
+                 <ActionButton 
+                   icon={<RotateCcw className="w-4 h-4" />}
+                   variant="warning"
+                   tooltip="Revoke Request"
+                   onClick={() => { setSelectedArticle(article); setActionType('status'); setTargetStatus('DRAFT'); }}
+                 />
+              )}
+
+              {/* Edit Action */}
+              {((user?.role === 'SUPER_ADMIN' && article.status !== 'PUBLISHED') || 
+                (user?.role === 'ADMIN' && article.status === 'DRAFT' && article.poster.id === user?.id) ||
+                (user?.role === 'ADMIN' && article.status === 'UNPUBLISHED' && user?.permissions?.includes('EDIT'))) && (
+                  <ActionButton 
+                    icon={<Edit2 className="w-4 h-4" />}
+                    variant="default"
+                    tooltip="Edit"
+                    onClick={() => navigate(`${rolePrefix}/article/${article.id}/edit`)}
+                  />
+              )}
+              
+              {/* Move to Trash Action */}
+              {(article.status !== 'PUBLISHED' && (
+                (article.status === 'DRAFT' && article.poster.id === user?.id) ||
+                (article.status === 'UNPUBLISHED' && (user?.role === 'SUPER_ADMIN' || user?.permissions?.includes('DELETE')))
+              )) && (
+                  <ActionButton 
+                    icon={<Trash2 className="w-4 h-4" />}
+                    variant="danger"
+                    tooltip="Move to Trash"
+                    onClick={() => { setSelectedArticle(article); setActionType('delete'); }}
+                  />
+              )}
+            </>
+          )}
+        </div>
+      ),
+      className: "text-right"
+    }
   ];
 
   return (
@@ -361,6 +400,28 @@ const Articles = () => {
         }
         variant={targetStatus === 'PUBLISHED' ? 'success' : 'warning'}
         isLoading={statusMutation.isPending}
+      />
+
+      <ConfirmModal
+        isOpen={actionType === 'restore'}
+        onClose={handleCloseModals}
+        onConfirm={() => selectedArticle && restoreMutation.mutate(selectedArticle.id)}
+        title="Restore Article"
+        message={`Are you sure you want to restore "${selectedArticle?.title}"? It will appear back in the article list.`}
+        confirmText="Restore"
+        variant="success"
+        isLoading={restoreMutation.isPending}
+      />
+
+      <ConfirmModal
+        isOpen={actionType === 'permanent'}
+        onClose={handleCloseModals}
+        onConfirm={() => selectedArticle && permanentDeleteMutation.mutate(selectedArticle.id)}
+        title="Delete Permanently"
+        message={`WARNING: This action cannot be undone. Are you sure you want to permanently delete "${selectedArticle?.title}"?`}
+        confirmText="Delete Forever"
+        variant="danger"
+        isLoading={permanentDeleteMutation.isPending}
       />
     </div>
   );
