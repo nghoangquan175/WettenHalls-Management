@@ -6,9 +6,24 @@
     "dev:super": "npm run dev --prefix frontend -- --port 5173",
     "dev:admin": "npm run dev --prefix frontend -- --port 5174",
     "dev:server": "npm run dev --prefix backend",
-    "dev": "concurrently -n \"SUPER,ADMIN,SERVER\" -c \"blue,green,magenta\" \"npm run dev:super\" \"npm run dev:admin\" \"npm run dev:server\""
+    "dev": "concurrently -n \"SUPER,ADMIN,SERVER\" -c \"blue,green,magenta\" \"npm run dev:super\" \"npm run dev:admin\" \"npm run dev:server\"",
+    "prepare": "husky install"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.3",
+    "husky": "^8.0.0",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.2"
+  },
+  "lint-staged": {
+    "**/*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "**/*.{json,css,scss,md}": [
+      "prettier --write"
+    ]
   }
 }

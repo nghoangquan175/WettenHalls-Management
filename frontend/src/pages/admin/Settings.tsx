@@ -1,36 +1,40 @@
-import React, { useState, useEffect } from "react";
-import { NavigationBuilder } from "../../components/admin/settings/NavigationBuilder";
-import { Layout, PanelBottom, Settings as SettingsIcon, Loader2 } from "lucide-react";
-import { clsx } from "clsx";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { navigationService, type NavigationVersion, type NavigationHeader } from "../../services/navigationService";
-import { ConfirmModal } from "../../components/ui/Modal/ConfirmModal";
-import { useBlocker } from "react-router-dom";
-import { toast } from "react-hot-toast";
+import { useState, useEffect } from 'react';
+import { NavigationBuilder } from '../../components/admin/settings/NavigationBuilder';
+import { Layout, PanelBottom, Loader2 } from 'lucide-react';
+import { clsx } from 'clsx';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { navigationService } from '../../services/navigationService';
+import { ConfirmModal } from '../../components/ui/Modal/ConfirmModal';
+import { useBlocker } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 
 const Settings = () => {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"header" | "footer">("header");
-  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
-  
+  const [activeTab, setActiveTab] = useState<'header' | 'footer'>('header');
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(
+    null
+  );
+
   // Dirty state management
   const [isBuilderDirty, setIsBuilderDirty] = useState(false);
-  const [pendingTab, setPendingTab] = useState<"header" | "footer" | null>(null);
+  const [pendingTab, setPendingTab] = useState<'header' | 'footer' | null>(
+    null
+  );
 
   // 1. Browser-level blocking (Refresh/Close Tab)
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isBuilderDirty) {
         e.preventDefault();
-        e.returnValue = "";
+        e.returnValue = '';
       }
     };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isBuilderDirty]);
 
   // 2. SPA-level blocking (Sidebar links, etc.)
-  const blocker = useBlocker(({ nextLocation }) => {
+  const blocker = useBlocker(({}) => {
     // Block if dirty AND moving to a different primary route (not just changing tab state locally)
     return isBuilderDirty && !pendingTab;
   });
@@ -50,17 +54,21 @@ const Settings = () => {
 
   // 1. Fetch all versions list for the current tab
   const { data: versions = [], isLoading: isLoadingVersions } = useQuery({
-    queryKey: ["navigation", "versions", activeTab],
+    queryKey: ['navigation', 'versions', activeTab],
     queryFn: () => navigationService.listVersions(activeTab),
   });
 
   // 2. Determine which version to load in detail
-  const effectiveId = selectedVersionId || versions.find(v => v.active)?.id || null;
+  const effectiveId =
+    selectedVersionId || versions.find((v) => v.active)?.id || null;
 
   // 3. Fetch specific version details
   const { data: currentVersion = null, isLoading: isLoadingDetail } = useQuery({
-    queryKey: ["navigation", "detail", effectiveId],
-    queryFn: () => effectiveId ? navigationService.getVersionById(effectiveId) : Promise.resolve(null),
+    queryKey: ['navigation', 'detail', effectiveId],
+    queryFn: () =>
+      effectiveId
+        ? navigationService.getVersionById(effectiveId)
+        : Promise.resolve(null),
     enabled: !!effectiveId,
   });
 
@@ -72,58 +80,69 @@ const Settings = () => {
 
   // Mutations
   const saveMutation = useMutation({
-    mutationFn: ({ id, items }: { id: string; items: any[] }) => navigationService.updateVersion(id, items),
+    mutationFn: ({ id, items }: { id: string; items: any[] }) =>
+      navigationService.updateVersion(id, items),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["navigation", "detail"] });
-      toast.success("Version saved successfully!");
+      queryClient.invalidateQueries({ queryKey: ['navigation', 'detail'] });
+      toast.success('Version saved successfully!');
     },
     onError: () => {
-      toast.error("Failed to save version. Please try again.");
-    }
+      toast.error('Failed to save version. Please try again.');
+    },
   });
 
   const saveAsMutation = useMutation({
-    mutationFn: (data: { type: 'header' | 'footer'; versionName: string; items: any[] }) => navigationService.createVersion(data),
+    mutationFn: (data: {
+      type: 'header' | 'footer';
+      versionName: string;
+      items: any[];
+    }) => navigationService.createVersion(data),
     onSuccess: (newVersion) => {
-      queryClient.invalidateQueries({ queryKey: ["navigation", "versions", activeTab] });
+      queryClient.invalidateQueries({
+        queryKey: ['navigation', 'versions', activeTab],
+      });
       setSelectedVersionId(newVersion.id);
       toast.success(`Version "${newVersion.versionName}" created!`);
     },
     onError: (error: any) => {
-      const message = error?.message?.includes("already exists") 
-        ? "A version with this name already exists."
-        : "Failed to create new version.";
+      const message = error?.message?.includes('already exists')
+        ? 'A version with this name already exists.'
+        : 'Failed to create new version.';
       toast.error(message);
-    }
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => navigationService.deleteVersion(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["navigation", "versions", activeTab] });
+      queryClient.invalidateQueries({
+        queryKey: ['navigation', 'versions', activeTab],
+      });
       setSelectedVersionId(null);
-      toast.success("Version deleted successfully.");
+      toast.success('Version deleted successfully.');
     },
     onError: () => {
       toast.error("Failed to delete version. Ensure it isn't active.");
-    }
+    },
   });
 
   const activateMutation = useMutation({
     mutationFn: (id: string) => navigationService.activateVersion(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["navigation", "versions", activeTab] });
-      queryClient.invalidateQueries({ queryKey: ["navigation", "detail"] });
-      toast.success("Navigation activated for the entire site!");
+      queryClient.invalidateQueries({
+        queryKey: ['navigation', 'versions', activeTab],
+      });
+      queryClient.invalidateQueries({ queryKey: ['navigation', 'detail'] });
+      toast.success('Navigation activated for the entire site!');
     },
     onError: () => {
-      toast.error("Failed to activate version.");
-    }
+      toast.error('Failed to activate version.');
+    },
   });
 
-  const handleTabSwitch = (tab: "header" | "footer") => {
+  const handleTabSwitch = (tab: 'header' | 'footer') => {
     if (tab === activeTab) return;
-    
+
     if (isBuilderDirty) {
       setPendingTab(tab);
     } else {
@@ -154,24 +173,24 @@ const Settings = () => {
       {/* Tabs */}
       <div className="flex p-1 bg-gray-100 rounded-xl w-fit">
         <button
-          onClick={() => handleTabSwitch("header")}
+          onClick={() => handleTabSwitch('header')}
           className={clsx(
-            "flex items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all",
-            activeTab === "header"
-              ? "bg-white text-primary shadow-sm"
-              : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
+            'flex items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all',
+            activeTab === 'header'
+              ? 'bg-white text-primary shadow-sm'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
           )}
         >
           <Layout size={18} />
           Header Navigation
         </button>
         <button
-          onClick={() => handleTabSwitch("footer")}
+          onClick={() => handleTabSwitch('footer')}
           className={clsx(
-            "flex items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all",
-            activeTab === "footer"
-              ? "bg-white text-primary shadow-sm"
-              : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
+            'flex items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-all',
+            activeTab === 'footer'
+              ? 'bg-white text-primary shadow-sm'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
           )}
         >
           <PanelBottom size={18} />
@@ -190,7 +209,7 @@ const Settings = () => {
       />
 
       <ConfirmModal
-        isOpen={blocker.state === "blocked"}
+        isOpen={blocker.state === 'blocked'}
         onClose={handleCancelBlocker}
         onConfirm={handleConfirmBlocker}
         title="Unsaved Changes"
@@ -204,25 +223,41 @@ const Settings = () => {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20 space-y-4">
               <Loader2 className="w-10 h-10 text-primary animate-spin" />
-              <p className="ContentMBold text-gray-500">Loading navigation data...</p>
+              <p className="ContentMBold text-gray-500">
+                Loading navigation data...
+              </p>
             </div>
           ) : (
             <NavigationBuilder
               key={activeTab}
               type={activeTab}
-              title={activeTab === "header" ? "Header Navigation" : "Footer Columns"}
+              title={
+                activeTab === 'header' ? 'Header Navigation' : 'Footer Columns'
+              }
               description={
-                activeTab === "header"
-                  ? "Manage main menu items and their dropdown sub-menus."
-                  : "Configure footer column labels and the links within each column."
+                activeTab === 'header'
+                  ? 'Manage main menu items and their dropdown sub-menus.'
+                  : 'Configure footer column labels and the links within each column.'
               }
               versions={versions}
               currentVersion={currentVersion}
               onVersionChange={setSelectedVersionId}
-              onSave={async (id, items) => { await saveMutation.mutateAsync({ id, items }); }}
-              onSaveAs={async (name, items) => { await saveAsMutation.mutateAsync({ type: activeTab, versionName: name, items }); }}
-              onDelete={async (id) => { await deleteMutation.mutateAsync(id); }}
-              onActivate={async (id) => { await activateMutation.mutateAsync(id); }}
+              onSave={async (id, items) => {
+                await saveMutation.mutateAsync({ id, items });
+              }}
+              onSaveAs={async (name, items) => {
+                await saveAsMutation.mutateAsync({
+                  type: activeTab,
+                  versionName: name,
+                  items,
+                });
+              }}
+              onDelete={async (id) => {
+                await deleteMutation.mutateAsync(id);
+              }}
+              onActivate={async (id) => {
+                await activateMutation.mutateAsync(id);
+              }}
               onDirtyChange={setIsBuilderDirty}
             />
           )}

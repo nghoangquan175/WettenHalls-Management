@@ -1,7 +1,7 @@
-import { Users, Tag, Settings, LayoutDashboard, Trash2 } from "lucide-react";
-import type { ElementType } from "react";
+import { Users, Tag, Settings, LayoutDashboard } from 'lucide-react';
+import type { ElementType } from 'react';
 
-export type UserRole = "SUPER_ADMIN" | "ADMIN" | "GUEST";
+export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'GUEST';
 
 export interface NavItem {
   label: string;
@@ -13,37 +13,37 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   {
-    label: "Dashboard",
-    path: "",
+    label: 'Dashboard',
+    path: '',
     icon: LayoutDashboard,
-    roles: ["SUPER_ADMIN", "ADMIN"],
+    roles: ['SUPER_ADMIN', 'ADMIN'],
   },
   {
-    label: "Users",
-    path: "user",
+    label: 'Users',
+    path: 'user',
     icon: Users,
-    roles: ["SUPER_ADMIN"],
+    roles: ['SUPER_ADMIN'],
   },
   {
-    label: "Articles",
-    path: "article",
+    label: 'Articles',
+    path: 'article',
     icon: Tag,
-    roles: ["SUPER_ADMIN", "ADMIN"],
+    roles: ['SUPER_ADMIN', 'ADMIN'],
   },
   {
-    label: "Settings",
-    path: "setting",
+    label: 'Settings',
+    path: 'setting',
     icon: Settings,
-    roles: ["SUPER_ADMIN", "ADMIN"],
+    roles: ['SUPER_ADMIN', 'ADMIN'],
   },
 ];
 
 export const getRolePrefix = (role: UserRole): string => {
   switch (role) {
-    case "SUPER_ADMIN":
-    case "ADMIN":
-      return "/users";
+    case 'SUPER_ADMIN':
+    case 'ADMIN':
+      return '/users';
     default:
-      return "";
+      return '';
   }
 };

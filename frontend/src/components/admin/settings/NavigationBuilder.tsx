@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -7,19 +7,19 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-} from "@dnd-kit/core";
+} from '@dnd-kit/core';
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { Plus, Save, RotateCcw, Trash2, CheckCircle2, Copy } from "lucide-react";
-import { SortableItem } from "./SortableItem";
-import { Modal } from "../../ui/Modal/Modal";
-import { ConfirmModal } from "../../ui/Modal/ConfirmModal";
-import { Button } from "../../ui/Button/Button";
-import { clsx } from "clsx";
+} from '@dnd-kit/sortable';
+import { Plus, Save, RotateCcw, Trash2, Copy } from 'lucide-react';
+import { SortableItem } from './SortableItem';
+import { Modal } from '../../ui/Modal/Modal';
+import { ConfirmModal } from '../../ui/Modal/ConfirmModal';
+import { Button } from '../../ui/Button/Button';
+import { clsx } from 'clsx';
 
 export interface NavItem {
   id: string;
@@ -39,10 +39,13 @@ export interface NavigationVersion {
 }
 
 interface NavigationBuilderProps {
-  type: "header" | "footer";
+  type: 'header' | 'footer';
   title: string;
   description: string;
-  versions: Pick<NavigationVersion, 'id' | 'versionName' | 'active' | 'updatedAt'>[];
+  versions: Pick<
+    NavigationVersion,
+    'id' | 'versionName' | 'active' | 'updatedAt'
+  >[];
   currentVersion: NavigationVersion | null;
   onVersionChange: (id: string) => void;
   onSave: (id: string, items: NavItem[]) => Promise<void>;
@@ -66,18 +69,22 @@ export function NavigationBuilder({
   onDirtyChange,
 }: NavigationBuilderProps) {
   const [items, setItems] = useState<NavItem[]>([]);
-  const [editingItem, setEditingItem] = useState<{ parentId?: string; item?: NavItem } | null>(null);
+  const [editingItem, setEditingItem] = useState<{
+    parentId?: string;
+    item?: NavItem;
+  } | null>(null);
   const [showSaveAsModal, setShowSaveAsModal] = useState(false);
-  const [newVersionName, setNewVersionName] = useState("");
+  const [newVersionName, setNewVersionName] = useState('');
   const [pendingVersionId, setPendingVersionId] = useState<string | null>(null);
 
   const [confirmState, setConfirmState] = useState<{
-    type: "none" | "save" | "reset" | "activate" | "delete" | "switch-version";
+    type: 'none' | 'save' | 'reset' | 'activate' | 'delete' | 'switch-version';
     isLoading: boolean;
-  }>({ type: "none", isLoading: false });
+  }>({ type: 'none', isLoading: false });
 
   // Check for unsaved changes
-  const isDirty = JSON.stringify(items) !== JSON.stringify(currentVersion?.items || []);
+  const isDirty =
+    JSON.stringify(items) !== JSON.stringify(currentVersion?.items || []);
 
   useEffect(() => {
     onDirtyChange?.(isDirty);
@@ -90,7 +97,7 @@ export function NavigationBuilder({
     } else {
       setItems([]);
     }
-  }, [currentVersion?.id]);
+  }, [currentVersion]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -100,36 +107,36 @@ export function NavigationBuilder({
   );
 
   const handleConfirmAction = async () => {
-    if (!currentVersion && confirmState.type !== "switch-version") return;
+    if (!currentVersion && confirmState.type !== 'switch-version') return;
 
     setConfirmState((prev) => ({ ...prev, isLoading: true }));
 
     try {
-      if (confirmState.type === "save") {
+      if (confirmState.type === 'save') {
         if (currentVersion) await onSave(currentVersion.id, items);
-      } else if (confirmState.type === "reset") {
+      } else if (confirmState.type === 'reset') {
         setItems(currentVersion?.items || []);
-      } else if (confirmState.type === "activate") {
+      } else if (confirmState.type === 'activate') {
         if (currentVersion) await onActivate(currentVersion.id);
-      } else if (confirmState.type === "delete") {
+      } else if (confirmState.type === 'delete') {
         if (currentVersion) await onDelete(currentVersion.id);
-      } else if (confirmState.type === "switch-version") {
+      } else if (confirmState.type === 'switch-version') {
         if (pendingVersionId) {
           onVersionChange(pendingVersionId);
           setPendingVersionId(null);
         }
       }
     } catch (error) {
-      console.error("Action failed:", error);
+      console.error('Action failed:', error);
     } finally {
-      setConfirmState({ type: "none", isLoading: false });
+      setConfirmState({ type: 'none', isLoading: false });
     }
   };
 
   const handleVersionSelect = (id: string) => {
     if (isDirty) {
       setPendingVersionId(id);
-      setConfirmState({ type: "switch-version", isLoading: false });
+      setConfirmState({ type: 'switch-version', isLoading: false });
     } else {
       onVersionChange(id);
     }
@@ -137,15 +144,15 @@ export function NavigationBuilder({
 
   const handleSaveAs = async () => {
     if (!newVersionName.trim()) return;
-    setConfirmState({ type: "none", isLoading: true });
+    setConfirmState({ type: 'none', isLoading: true });
     try {
       await onSaveAs(newVersionName, items);
       setShowSaveAsModal(false);
-      setNewVersionName("");
+      setNewVersionName('');
     } catch (error) {
-      console.error("Save As failed:", error);
+      console.error('Save As failed:', error);
     } finally {
-      setConfirmState({ type: "none", isLoading: false });
+      setConfirmState({ type: 'none', isLoading: false });
     }
   };
 
@@ -162,8 +169,12 @@ export function NavigationBuilder({
 
         return prevItems.map((item) => {
           if (item.id === parentId && item.children) {
-            const oldIndex = item.children.findIndex((child) => child.id === active.id);
-            const newIndex = item.children.findIndex((child) => child.id === over.id);
+            const oldIndex = item.children.findIndex(
+              (child) => child.id === active.id
+            );
+            const newIndex = item.children.findIndex(
+              (child) => child.id === over.id
+            );
             return {
               ...item,
               children: arrayMove(item.children, oldIndex, newIndex),
@@ -178,8 +189,8 @@ export function NavigationBuilder({
   const addItem = (parentId?: string) => {
     const newItem: NavItem = {
       id: Math.random().toString(36).substr(2, 9),
-      label: "New Item",
-      url: "",
+      label: 'New Item',
+      url: '',
     };
 
     if (!parentId) {
@@ -217,16 +228,24 @@ export function NavigationBuilder({
     }
   };
 
-  const updateItem = (id: string, data: Partial<NavItem>, parentId?: string) => {
+  const updateItem = (
+    id: string,
+    data: Partial<NavItem>,
+    parentId?: string
+  ) => {
     if (!parentId) {
-      setItems(items.map((item) => (item.id === id ? { ...item, ...data } : item)));
+      setItems(
+        items.map((item) => (item.id === id ? { ...item, ...data } : item))
+      );
     } else {
       setItems(
         items.map((item) => {
           if (item.id === parentId) {
             return {
               ...item,
-              children: item.children?.map((child) => (child.id === id ? { ...child, ...data } : child)),
+              children: item.children?.map((child) =>
+                child.id === id ? { ...child, ...data } : child
+              ),
             };
           }
           return item;
@@ -237,7 +256,7 @@ export function NavigationBuilder({
 
   const handleSaveClick = () => {
     if (currentVersion) {
-      setConfirmState({ type: "save", isLoading: false });
+      setConfirmState({ type: 'save', isLoading: false });
     } else {
       setShowSaveAsModal(true);
     }
@@ -249,17 +268,21 @@ export function NavigationBuilder({
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-gray-100">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex flex-col">
-            <label className="ContentSBold text-gray-500 mb-1">Select Version</label>
+            <label className="ContentSBold text-gray-500 mb-1">
+              Select Version
+            </label>
             <select
-              value={currentVersion?.id || ""}
+              value={currentVersion?.id || ''}
               onChange={(e) => handleVersionSelect(e.target.value)}
               disabled={versions.length === 0}
               className="px-4 py-2 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ContentMBold text-gray-900 min-w-[200px] disabled:bg-gray-50 disabled:text-gray-400"
             >
-              {versions.length === 0 && <option value="">No versions created</option>}
+              {versions.length === 0 && (
+                <option value="">No versions created</option>
+              )}
               {versions.map((v) => (
                 <option key={v.id} value={v.id}>
-                  {v.versionName} {v.active ? " (Active)" : ""}
+                  {v.versionName} {v.active ? ' (Active)' : ''}
                 </option>
               ))}
             </select>
@@ -270,15 +293,27 @@ export function NavigationBuilder({
               <input
                 type="checkbox"
                 checked={currentVersion?.active || false}
-                disabled={!currentVersion || currentVersion?.active || confirmState.isLoading}
-                onChange={() => setConfirmState({ type: "activate", isLoading: false })}
+                disabled={
+                  !currentVersion ||
+                  currentVersion?.active ||
+                  confirmState.isLoading
+                }
+                onChange={() =>
+                  setConfirmState({ type: 'activate', isLoading: false })
+                }
                 className="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary disabled:opacity-50"
               />
-              <span className={clsx(
-                "ContentMBold transition-colors",
-                !currentVersion ? "text-gray-400" : (currentVersion?.active ? "text-green-600" : "text-gray-600 group-hover:text-gray-900")
-              )}>
-                {currentVersion?.active ? "Active" : "Set Active"}
+              <span
+                className={clsx(
+                  'ContentMBold transition-colors',
+                  !currentVersion
+                    ? 'text-gray-400'
+                    : currentVersion?.active
+                      ? 'text-green-600'
+                      : 'text-gray-600 group-hover:text-gray-900'
+                )}
+              >
+                {currentVersion?.active ? 'Active' : 'Set Active'}
               </span>
             </label>
 
@@ -286,9 +321,21 @@ export function NavigationBuilder({
               variant="ghost"
               size="sm"
               className="text-red-500 hover:bg-red-50 hover:text-red-600"
-              disabled={!currentVersion || currentVersion?.active || confirmState.isLoading}
-              onClick={() => setConfirmState({ type: "delete", isLoading: false })}
-              title={!currentVersion ? "No version to delete" : (currentVersion?.active ? "Cannot delete the active version" : "Delete version")}
+              disabled={
+                !currentVersion ||
+                currentVersion?.active ||
+                confirmState.isLoading
+              }
+              onClick={() =>
+                setConfirmState({ type: 'delete', isLoading: false })
+              }
+              title={
+                !currentVersion
+                  ? 'No version to delete'
+                  : currentVersion?.active
+                    ? 'Cannot delete the active version'
+                    : 'Delete version'
+              }
             >
               <Trash2 size={18} />
             </Button>
@@ -298,7 +345,7 @@ export function NavigationBuilder({
         <div className="flex items-center gap-2 mt-auto">
           <Button
             variant="outline"
-            onClick={() => setConfirmState({ type: "reset", isLoading: false })}
+            onClick={() => setConfirmState({ type: 'reset', isLoading: false })}
             disabled={!currentVersion || confirmState.isLoading}
             leftIcon={<RotateCcw size={16} />}
           >
@@ -310,7 +357,7 @@ export function NavigationBuilder({
             disabled={confirmState.isLoading}
             leftIcon={<Save size={16} />}
           >
-            {currentVersion ? "Save" : "Save as"}
+            {currentVersion ? 'Save' : 'Save as'}
           </Button>
           {currentVersion && (
             <Button
@@ -328,25 +375,34 @@ export function NavigationBuilder({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h3 className="DisplaySBold text-gray-900">
-            {title} {currentVersion && <span className="text-primary">— {currentVersion.versionName}</span>}
+            {title}{' '}
+            {currentVersion && (
+              <span className="text-primary">
+                — {currentVersion.versionName}
+              </span>
+            )}
           </h3>
           <p className="ContentMRegular text-gray-500">
             {description}
             {currentVersion?.updatedAt && (
               <span className="ml-2 pl-2 border-l border-gray-200">
-                Last updated: {new Date(currentVersion.updatedAt).toLocaleString()}
+                Last updated:{' '}
+                {new Date(currentVersion.updatedAt).toLocaleString()}
               </span>
             )}
-            {!currentVersion && <span className="ml-2 italic text-gray-400">(Drafting new layout)</span>}
+            {!currentVersion && (
+              <span className="ml-2 italic text-gray-400">
+                (Drafting new layout)
+              </span>
+            )}
           </p>
         </div>
       </div>
 
-
       {/* Confirmation Modals */}
       <ConfirmModal
-        isOpen={confirmState.type === "reset"}
-        onClose={() => setConfirmState({ type: "none", isLoading: false })}
+        isOpen={confirmState.type === 'reset'}
+        onClose={() => setConfirmState({ type: 'none', isLoading: false })}
         onConfirm={handleConfirmAction}
         title="Reset Changes?"
         message="Are you sure you want to revert all changes to the last saved state for this version? This action cannot be undone."
@@ -356,8 +412,8 @@ export function NavigationBuilder({
       />
 
       <ConfirmModal
-        isOpen={confirmState.type === "save"}
-        onClose={() => setConfirmState({ type: "none", isLoading: false })}
+        isOpen={confirmState.type === 'save'}
+        onClose={() => setConfirmState({ type: 'none', isLoading: false })}
         onConfirm={handleConfirmAction}
         title="Save Version?"
         message={`Do you want to overwrite the items in "${currentVersion?.versionName}"?`}
@@ -367,8 +423,8 @@ export function NavigationBuilder({
       />
 
       <ConfirmModal
-        isOpen={confirmState.type === "activate"}
-        onClose={() => setConfirmState({ type: "none", isLoading: false })}
+        isOpen={confirmState.type === 'activate'}
+        onClose={() => setConfirmState({ type: 'none', isLoading: false })}
         onConfirm={handleConfirmAction}
         title="Activate Version?"
         message={`Do you want to set "${currentVersion?.versionName}" as the active navigation? This will deactivate all other versions.`}
@@ -378,8 +434,8 @@ export function NavigationBuilder({
       />
 
       <ConfirmModal
-        isOpen={confirmState.type === "delete"}
-        onClose={() => setConfirmState({ type: "none", isLoading: false })}
+        isOpen={confirmState.type === 'delete'}
+        onClose={() => setConfirmState({ type: 'none', isLoading: false })}
         onConfirm={handleConfirmAction}
         title="Delete Version?"
         message={`Are you sure you want to delete "${currentVersion?.versionName}"? This action is permanent.`}
@@ -389,8 +445,8 @@ export function NavigationBuilder({
       />
 
       <ConfirmModal
-        isOpen={confirmState.type === "switch-version"}
-        onClose={() => setConfirmState({ type: "none", isLoading: false })}
+        isOpen={confirmState.type === 'switch-version'}
+        onClose={() => setConfirmState({ type: 'none', isLoading: false })}
         onConfirm={handleConfirmAction}
         title="Unsaved Changes"
         message="You have unsaved changes in this version. Switching to another version will lose these changes. Continue?"
@@ -403,7 +459,9 @@ export function NavigationBuilder({
       <Modal
         isOpen={showSaveAsModal}
         onClose={() => setShowSaveAsModal(false)}
-        title={versions.length === 0 ? "Create New Version" : "Save As New Version"}
+        title={
+          versions.length === 0 ? 'Create New Version' : 'Save As New Version'
+        }
         size="sm"
         footer={
           <>
@@ -416,7 +474,7 @@ export function NavigationBuilder({
               disabled={!newVersionName.trim() || confirmState.isLoading}
               isLoading={confirmState.isLoading}
             >
-              {versions.length === 0 ? "Create" : "Save as New"}
+              {versions.length === 0 ? 'Create' : 'Save as New'}
             </Button>
           </>
         }
@@ -440,7 +498,11 @@ export function NavigationBuilder({
 
       {/* Builder Area */}
       <div className="bg-gray-50/50 border border-gray-100 rounded-3xl p-6 min-h-[400px]">
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e)}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={(e) => handleDragEnd(e)}
+        >
           <SortableContext items={items} strategy={verticalListSortingStrategy}>
             {items.map((item) => (
               <SortableItem
@@ -460,7 +522,10 @@ export function NavigationBuilder({
                       collisionDetection={closestCenter}
                       onDragEnd={(e) => handleDragEnd(e, item.id)}
                     >
-                      <SortableContext items={item.children} strategy={verticalListSortingStrategy}>
+                      <SortableContext
+                        items={item.children}
+                        strategy={verticalListSortingStrategy}
+                      >
                         {item.children.map((child) => (
                           <SortableItem
                             key={child.id}
@@ -469,7 +534,9 @@ export function NavigationBuilder({
                             url={child.url}
                             icon={child.icon}
                             depth={1}
-                            onEdit={() => setEditingItem({ parentId: item.id, item: child })}
+                            onEdit={() =>
+                              setEditingItem({ parentId: item.id, item: child })
+                            }
                             onDelete={() => removeItem(child.id, item.id)}
                           />
                         ))}
@@ -486,8 +553,13 @@ export function NavigationBuilder({
           onClick={() => addItem()}
           className="w-full mt-4 flex items-center justify-center gap-2 p-6 border-2 border-dashed border-gray-200 rounded-2xl text-gray-500 hover:text-primary hover:border-primary/50 hover:bg-primary/5 transition-all group"
         >
-          <Plus size={20} className="group-hover:scale-110 transition-transform" />
-          <span className="ContentMBold">Add New {type === "header" ? "Menu Item" : "Column"}</span>
+          <Plus
+            size={20}
+            className="group-hover:scale-110 transition-transform"
+          />
+          <span className="ContentMBold">
+            Add New {type === 'header' ? 'Menu Item' : 'Column'}
+          </span>
         </button>
       </div>
 
@@ -537,17 +609,23 @@ function ItemModal({
     >
       <div className="space-y-4">
         <div>
-          <label className="block ContentSBold text-gray-700 mb-1.5 focus-within:text-primary transition-colors">Label</label>
+          <label className="block ContentSBold text-gray-700 mb-1.5 focus-within:text-primary transition-colors">
+            Label
+          </label>
           <input
             type="text"
             value={formData.label}
-            onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, label: e.target.value })
+            }
             className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all ContentMRegular"
             placeholder="e.g. Products"
           />
         </div>
         <div>
-          <label className="block ContentSBold text-gray-700 mb-1.5 focus-within:text-primary transition-colors">URL</label>
+          <label className="block ContentSBold text-gray-700 mb-1.5 focus-within:text-primary transition-colors">
+            URL
+          </label>
           <input
             type="text"
             value={formData.url}
@@ -572,10 +650,14 @@ function ItemModal({
               <input
                 type="checkbox"
                 checked={formData.targetBlank}
-                onChange={(e) => setFormData({ ...formData, targetBlank: e.target.checked })}
+                onChange={(e) =>
+                  setFormData({ ...formData, targetBlank: e.target.checked })
+                }
                 className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
               />
-              <span className="ContentSRegular text-gray-600 group-hover:text-gray-900 transition-colors">Target _blank</span>
+              <span className="ContentSRegular text-gray-600 group-hover:text-gray-900 transition-colors">
+                Target _blank
+              </span>
             </label>
           </div>
         </div>
