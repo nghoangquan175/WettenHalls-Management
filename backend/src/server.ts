@@ -51,7 +51,7 @@ const createSessionMiddleware = (name: string) =>
     }),
     cookie: {
       maxAge: 1000 * 60 * 60 * 24, // 24 hours
-      secure: false, // Set to true if using HTTPS
+      secure: process.env.NODE_ENV === 'production', // Set to true if using HTTPS
       httpOnly: true,
       sameSite: 'none',
     },
