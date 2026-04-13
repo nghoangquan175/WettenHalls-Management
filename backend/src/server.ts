@@ -86,17 +86,17 @@ app.get('/', (req: Request, res: Response) => {
   });
 });
 
+// Connect to Database
+connectDB();
+
 app.use(errorHandler);
 
-const startServer = async () => {
-  await connectDB();
-
+// For local development
+if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
   });
-};
+}
 
-startServer().catch((err) => {
-  console.error('Failed to start server:', err);
-  process.exit(1);
-});
+// Export for Vercel
+export default app;
