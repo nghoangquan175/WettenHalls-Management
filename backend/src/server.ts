@@ -21,6 +21,8 @@ if (!SESSION_SECRET) {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(
   cors({
@@ -51,6 +53,7 @@ const createSessionMiddleware = (name: string) =>
       maxAge: 1000 * 60 * 60 * 24, // 24 hours
       secure: false, // Set to true if using HTTPS
       httpOnly: true,
+      sameSite: 'none',
     },
   });
 
