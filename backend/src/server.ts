@@ -22,32 +22,36 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors({
-  origin: [
-    process.env.CORS_ORIGIN || 'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:6699'
-  ],
-  credentials: true, // Allow cookies
-}));
+app.use(
+  cors({
+    origin: [
+      process.env.MANAGEMENT_ORIGIN || 'http://localhost:5173',
+      process.env.HOMEPAGE_ORIGIN || 'http://localhost:6699',
+      'http://localhost:5174',
+    ],
+    credentials: true, // Allow cookies
+  })
+);
 app.use(express.json());
 
 // Session Middleware Instances
-const createSessionMiddleware = (name: string) => session({
-  name,
-  secret: SESSION_SECRET,
-  resave: false,
-  saveUninitialized: false,
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/WettenHalls',
-    collectionName: 'sessions',
-  }),
-  cookie: {
-    maxAge: 1000 * 60 * 60 * 24, // 24 hours
-    secure: false, // Set to true if using HTTPS
-    httpOnly: true,
-  }
-});
+const createSessionMiddleware = (name: string) =>
+  session({
+    name,
+    secret: SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl:
+        process.env.MONGODB_URI || 'mongodb://localhost:27017/WettenHalls',
+      collectionName: 'sessions',
+    }),
+    cookie: {
+      maxAge: 1000 * 60 * 60 * 24, // 24 hours
+      secure: false, // Set to true if using HTTPS
+      httpOnly: true,
+    },
+  });
 
 const managementSession = createSessionMiddleware('management.sid');
 const homepageSession = createSessionMiddleware('homepage.sid');
@@ -55,7 +59,8 @@ const homepageSession = createSessionMiddleware('homepage.sid');
 // Dynamic Session Selection Middleware
 app.use((req: Request, res: Response, next) => {
   const origin = req.headers.origin;
-  const managementOrigin = process.env.MANAGEMENT_ORIGIN || 'http://localhost:5173';
+  const managementOrigin =
+    process.env.MANAGEMENT_ORIGIN || 'http://localhost:5173';
   const homepageOrigin = process.env.HOMEPAGE_ORIGIN || 'http://localhost:6699';
 
   if (origin === managementOrigin) {
@@ -63,7 +68,7 @@ app.use((req: Request, res: Response, next) => {
   } else if (origin === homepageOrigin) {
     return homepageSession(req, res, next);
   }
-  
+
   // Default to management if unknown or not provided
   managementSession(req, res, next);
 });
@@ -85,7 +90,7 @@ app.use(errorHandler);
 
 const startServer = async () => {
   await connectDB();
-  
+
   app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
   });
