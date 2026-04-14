@@ -38,6 +38,9 @@ app.use(
 app.use(express.json());
 
 // Session Middleware Instances
+const isProduction = process.env.NODE_ENV === 'production';
+const useHTTPS = process.env.USE_HTTPS === 'true';
+
 const createSessionMiddleware = (name: string) =>
   session({
     name,
@@ -51,9 +54,13 @@ const createSessionMiddleware = (name: string) =>
     }),
     cookie: {
       maxAge: 1000 * 60 * 60 * 24, // 24 hours
-      secure: process.env.NODE_ENV === 'production', // Set to true if using HTTPS
+      // In production, 'secure' must be true ONLY if using HTTPS.
+      // If using direct IP (HTTP), 'secure' must be false.
+      secure: isProduction && useHTTPS,
       httpOnly: true,
-      sameSite: 'none',
+      // If using HTTPS, 'none' is required for cross-site (if frontend/backend on different domains).
+      // If using HTTP (IP), 'lax' is required because 'none' without 'secure' is blocked by browsers.
+      sameSite: useHTTPS ? 'none' : 'lax',
     },
   });
 
