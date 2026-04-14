@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { ShieldAlert, ArrowLeft } from 'lucide-react';
 import { Button } from '../../components/ui/Button/Button';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 
 const NotFoundPage = () => {
   const navigate = useNavigate();

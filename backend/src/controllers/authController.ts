@@ -6,13 +6,22 @@ import { sendEmail } from '../services/emailService';
 // Temporary storage for reset tokens (Token -> Email)
 const resetTokens = new Map<string, string>();
 
-// Temporary storage for pending registrations (Email -> UserData)
-const pendingRegistrations = new Map<string, any>();
+interface IPendingRegistration {
+  name: string;
+  email: string;
+  password: string;
+  otp: string;
+  expires: number;
+}
+
+const pendingRegistrations = new Map<string, IPendingRegistration>();
 
 export const loginUser = async (req: Request, res: Response): Promise<void> => {
   const { email, password } = req.body;
   const origin = req.headers.origin;
-  const isHomepage = origin === process.env.HOMEPAGE_ORIGIN || origin === 'http://localhost:6699';
+  const isHomepage =
+    origin === process.env.HOMEPAGE_ORIGIN ||
+    origin === 'http://localhost:6699';
 
   if (!email || !password) {
     res.status(400).json({ message: 'Email and password are required' });
@@ -31,9 +40,10 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
     if (user && (await user.matchPassword(password))) {
       // Check for inactive status
       if (user.status === 'INACTIVE') {
-        res.status(403).json({ 
-          message: 'Your account is deactivated or deleted. Please contact Super Admin for support.',
-          code: 'ACCOUNT_INACTIVE'
+        res.status(403).json({
+          message:
+            'Your account is deactivated or deleted. Please contact Super Admin for support.',
+          code: 'ACCOUNT_INACTIVE',
         });
         return;
       }
@@ -53,12 +63,15 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
     } else {
       res.status(401).json({ message: 'Invalid email or password' });
     }
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-export const registerUser = async (req: Request, res: Response): Promise<void> => {
+export const registerUser = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const { name, email, password } = req.body;
 
   try {
@@ -71,20 +84,23 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
 
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    
+
     // Store in Map with 10-minute expiration
     pendingRegistrations.set(email, {
       name,
       email,
       password,
       otp,
-      expires: Date.now() + 10 * 60 * 1000 // 10 minutes
+      expires: Date.now() + 10 * 60 * 1000, // 10 minutes
     });
 
     // Cleanup after 10 minutes
-    setTimeout(() => {
-      pendingRegistrations.delete(email);
-    }, 10 * 60 * 1000);
+    setTimeout(
+      () => {
+        pendingRegistrations.delete(email);
+      },
+      10 * 60 * 1000
+    );
 
     // Send email with OTP
     await sendEmail({
@@ -99,15 +115,16 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
           </div>
           <p>This code will expire in 10 minutes.</p>
         </div>
-      `
+      `,
     });
 
-    res.status(200).json({ 
-      message: 'OTP sent to your email. Please verify to complete registration.',
-      email 
+    res.status(200).json({
+      message:
+        'OTP sent to your email. Please verify to complete registration.',
+      email,
     });
-  } catch (error) {
-    console.error('Registration error:', error);
+  } catch (_error) {
+    console.error('Registration error:', _error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -119,7 +136,9 @@ export const verifyOTP = async (req: Request, res: Response): Promise<void> => {
     const pendingData = pendingRegistrations.get(email);
 
     if (!pendingData) {
-      res.status(400).json({ message: 'No registration pending or OTP expired' });
+      res
+        .status(400)
+        .json({ message: 'No registration pending or OTP expired' });
       return;
     }
 
@@ -141,7 +160,7 @@ export const verifyOTP = async (req: Request, res: Response): Promise<void> => {
       password: pendingData.password,
       role: 'GUEST',
       status: 'ACTIVE',
-      permissions: ['VIEW']
+      permissions: ['VIEW'],
     });
 
     // Remove from Map
@@ -154,24 +173,28 @@ export const verifyOTP = async (req: Request, res: Response): Promise<void> => {
         name: user.name,
         email: user.email,
         role: user.role,
-      }
+      },
     });
-  } catch (error) {
-    console.error('Verify OTP error:', error);
+  } catch (_error) {
+    console.error('Verify OTP error:', _error);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+export const forgotPassword = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const { email } = req.body;
 
   try {
-    const user = await User.findOne({ email });
-    
+    // Check if user exists (to follow security practices, we don't alert the user)
+    await User.findOne({ email });
+
     // For security reasons, we should not reveal if the email exists or not
     // but in a dev environment or based on UX preference, we might alert.
     // The user requested: "gửi http://localhost:6699/reset-password/{rawtoken} tới email"
-    
+
     const token = crypto.randomBytes(20).toString('hex');
     resetTokens.set(token, email);
 
@@ -187,26 +210,28 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
         <p>You requested a password reset</p>
         <p>Click this <a href="${resetUrl}">link</a> to reset your password.</p>
         <p>If you didn't request this, please ignore this email.</p>
-      `
+      `,
     });
 
     res.status(200).json({ message: 'Reset email sent successfully' });
-  } catch (error) {
-    console.error('Forgot password error:', error);
+  } catch (_error) {
+    console.error('Forgot password error:', _error);
     res.status(500).json({ message: 'Error sending reset email' });
   }
 };
 
 export const logoutUser = (req: Request, res: Response): void => {
   const origin = req.headers.origin;
-  const isHomepage = origin === process.env.HOMEPAGE_ORIGIN || origin === 'http://localhost:6699';
+  const isHomepage =
+    origin === process.env.HOMEPAGE_ORIGIN ||
+    origin === 'http://localhost:6699';
   const cookieName = isHomepage ? 'homepage.sid' : 'management.sid';
 
   req.session.destroy((err) => {
     if (err) {
-      res.status(500).json({ 
+      res.status(500).json({
         message: 'Could not log out. Please try again.',
-        code: 'LOGOUT_FAILED'
+        code: 'LOGOUT_FAILED',
       });
       return;
     }
@@ -218,7 +243,7 @@ export const logoutUser = (req: Request, res: Response): void => {
 export const getMe = async (req: Request, res: Response): Promise<void> => {
   try {
     const user = await User.findById(req.session.user!.id);
-    
+
     if (!user) {
       req.session.destroy(() => {
         res.status(401).json({ message: 'User no longer exists' });
@@ -228,9 +253,10 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
 
     if (user.status === 'INACTIVE') {
       req.session.destroy(() => {
-        res.status(403).json({ 
-          message: 'Your account is deactivated or deleted. Please contact Super Admin for support.',
-          code: 'ACCOUNT_INACTIVE'
+        res.status(403).json({
+          message:
+            'Your account is deactivated or deleted. Please contact Super Admin for support.',
+          code: 'ACCOUNT_INACTIVE',
         });
       });
       return;
@@ -243,12 +269,15 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
       role: user.role,
       permissions: user.permissions || [],
     });
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+export const resetPassword = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const { token, password } = req.body;
 
   try {
@@ -272,8 +301,8 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
     resetTokens.delete(token);
 
     res.status(200).json({ message: 'Password reset successfully' });
-  } catch (error) {
-    console.error('Reset password error:', error);
+  } catch (_error) {
+    console.error('Reset password error:', _error);
     res.status(500).json({ message: 'Error resetting password' });
   }
 };

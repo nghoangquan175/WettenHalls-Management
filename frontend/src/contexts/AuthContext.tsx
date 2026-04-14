@@ -1,28 +1,9 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import type { UserRole } from '../constants/navigation';
 import { authService } from '../services/authService';
 import { ApiError } from '../services/api';
-
-interface AuthUser {
-  id: string;
-  name: string;
-  role: UserRole;
-  permissions: string[];
-  isAuthenticated: boolean;
-}
-
-interface AuthContextType {
-  user: AuthUser | null;
-  isInitializing: boolean;
-  connectionError: boolean;
-  authError: string | null;
-  login: (userData: { id: string; name: string; role: UserRole; permissions?: string[] }) => void;
-  logout: () => Promise<void>;
-  clearAuthError: () => void;
-  triggerAuthError: (message: string) => void;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import { AuthContext } from './AuthContextObject';
+import type { AuthUser } from './AuthContextTypes';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -61,14 +42,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     checkSession();
   }, []);
 
-  const login = (userData: { id: string; name: string; role: UserRole; permissions?: string[] }) => {
-    setUser({ ...userData, permissions: userData.permissions || [], isAuthenticated: true });
+  const login = (userData: {
+    id: string;
+    name: string;
+    role: UserRole;
+    permissions?: string[];
+  }) => {
+    setUser({
+      ...userData,
+      permissions: userData.permissions || [],
+      isAuthenticated: true,
+    });
     setConnectionError(false);
     setAuthError(null);
   };
 
   const clearAuthError = () => setAuthError(null);
-  
+
   const triggerAuthError = (message: string) => {
     setAuthError(message);
     setUser(null);
@@ -77,7 +67,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     try {
       await authService.logout();
-    } catch (err) {
+    } catch {
+      // Ignore logout errors
     } finally {
       setUser(null);
       setAuthError(null);
@@ -85,23 +76,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isInitializing, 
-      connectionError, 
-      authError, 
-      login, 
-      logout, 
-      clearAuthError, 
-      triggerAuthError 
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isInitializing,
+        connectionError,
+        authError,
+        login,
+        logout,
+        clearAuthError,
+        triggerAuthError,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
 };

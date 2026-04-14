@@ -11,6 +11,7 @@ import { toast } from 'react-hot-toast';
 const Settings = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'header' | 'footer'>('header');
+  const [prevTab, setPrevTab] = useState<'header' | 'footer'>(activeTab);
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(
     null
   );
@@ -20,6 +21,13 @@ const Settings = () => {
   const [pendingTab, setPendingTab] = useState<'header' | 'footer' | null>(
     null
   );
+
+  // Sync state with tab during render to avoid cascading renders in useEffect
+  if (activeTab !== prevTab) {
+    setPrevTab(activeTab);
+    setSelectedVersionId(null);
+    setIsBuilderDirty(false);
+  }
 
   // 1. Browser-level blocking (Refresh/Close Tab)
   useEffect(() => {
@@ -34,7 +42,7 @@ const Settings = () => {
   }, [isBuilderDirty]);
 
   // 2. SPA-level blocking (Sidebar links, etc.)
-  const blocker = useBlocker(({}) => {
+  const blocker = useBlocker(() => {
     // Block if dirty AND moving to a different primary route (not just changing tab state locally)
     return isBuilderDirty && !pendingTab;
   });
@@ -72,16 +80,15 @@ const Settings = () => {
     enabled: !!effectiveId,
   });
 
-  // Reset selection when tab changes
-  useEffect(() => {
-    setSelectedVersionId(null);
-    setIsBuilderDirty(false);
-  }, [activeTab]);
-
-  // Mutations
+  // Mutation hooks
   const saveMutation = useMutation({
-    mutationFn: ({ id, items }: { id: string; items: any[] }) =>
-      navigationService.updateVersion(id, items),
+    mutationFn: ({
+      id,
+      items,
+    }: {
+      id: string;
+      items: import('../../components/admin/settings/NavigationBuilder').NavItem[];
+    }) => navigationService.updateVersion(id, items),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['navigation', 'detail'] });
       toast.success('Version saved successfully!');
@@ -95,7 +102,7 @@ const Settings = () => {
     mutationFn: (data: {
       type: 'header' | 'footer';
       versionName: string;
-      items: any[];
+      items: import('../../components/admin/settings/NavigationBuilder').NavItem[];
     }) => navigationService.createVersion(data),
     onSuccess: (newVersion) => {
       queryClient.invalidateQueries({
@@ -104,10 +111,11 @@ const Settings = () => {
       setSelectedVersionId(newVersion.id);
       toast.success(`Version "${newVersion.versionName}" created!`);
     },
-    onError: (error: any) => {
-      const message = error?.message?.includes('already exists')
-        ? 'A version with this name already exists.'
-        : 'Failed to create new version.';
+    onError: (error: unknown) => {
+      const message =
+        error instanceof Error && error.message.includes('already exists')
+          ? 'A version with this name already exists.'
+          : 'Failed to create new version.';
       toast.error(message);
     },
   });

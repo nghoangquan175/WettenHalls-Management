@@ -3,15 +3,20 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
+const transporterConfig: any = {
   host: process.env.SMTP_HOST || 'localhost',
   port: parseInt(process.env.SMTP_PORT || '1025'),
-  secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER || '',
+  secure: process.env.SMTP_SECURE === 'true',
+};
+
+if (process.env.SMTP_USER) {
+  transporterConfig.auth = {
+    user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS || '',
-  },
-});
+  };
+}
+
+const transporter = nodemailer.createTransport(transporterConfig);
 
 interface SendEmailOptions {
   to: string | string[];

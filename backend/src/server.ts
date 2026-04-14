@@ -95,12 +95,9 @@ connectDB();
 
 app.use(errorHandler);
 
-// For local development
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
-  });
-}
+// For Docker/Azure deployment: always listen
+app.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}`);
+});
 
-// Export for Vercel
 export default app;

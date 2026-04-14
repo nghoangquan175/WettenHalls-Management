@@ -1,17 +1,17 @@
 import { type Editor } from '@tiptap/react';
-import { 
-  Bold, 
-  Italic, 
-  List, 
-  ListOrdered, 
-  Quote, 
-  Heading1, 
-  Heading2, 
-  Heading3, 
-  Image as ImageIcon, 
+import {
+  Bold,
+  Italic,
+  List,
+  ListOrdered,
+  Quote,
+  Heading1,
+  Heading2,
+  Heading3,
+  Image as ImageIcon,
   Link as LinkIcon,
   Undo,
-  Redo
+  Redo,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
@@ -19,6 +19,34 @@ interface EditorToolbarProps {
   editor: Editor | null;
   onImageUpload: () => void;
 }
+
+const ToolbarButton = ({
+  onClick,
+  isActive = false,
+  disabled = false,
+  children,
+  tooltip,
+}: {
+  onClick: () => void;
+  isActive?: boolean;
+  disabled?: boolean;
+  children: React.ReactNode;
+  tooltip: string;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    className={cn(
+      'p-2 rounded-lg transition-all duration-200 hover:bg-gray-100',
+      isActive ? 'bg-primary/10 text-primary' : 'text-gray-500',
+      disabled && 'opacity-50 cursor-not-allowed'
+    )}
+    title={tooltip}
+  >
+    {children}
+  </button>
+);
 
 const EditorToolbar = ({ editor, onImageUpload }: EditorToolbarProps) => {
   if (!editor) return null;
@@ -30,34 +58,6 @@ const EditorToolbar = ({ editor, onImageUpload }: EditorToolbarProps) => {
     }
   };
 
-  const ToolbarButton = ({ 
-    onClick, 
-    isActive = false, 
-    disabled = false, 
-    children, 
-    tooltip 
-  }: { 
-    onClick: () => void; 
-    isActive?: boolean; 
-    disabled?: boolean; 
-    children: React.ReactNode;
-    tooltip: string;
-  }) => (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(
-        "p-2 rounded-lg transition-all duration-200 hover:bg-gray-100",
-        isActive ? "bg-primary/10 text-primary" : "text-gray-500",
-        disabled && "opacity-50 cursor-not-allowed"
-      )}
-      title={tooltip}
-    >
-      {children}
-    </button>
-  );
-
   return (
     <div className="flex flex-wrap items-center gap-1 p-2 border-b border-gray-100 bg-gray-50/50 sticky top-0 z-10 rounded-t-xl">
       <ToolbarButton
@@ -67,7 +67,7 @@ const EditorToolbar = ({ editor, onImageUpload }: EditorToolbarProps) => {
       >
         <Bold className="w-4 h-4" />
       </ToolbarButton>
-      
+
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleItalic().run()}
         isActive={editor.isActive('italic')}
@@ -138,10 +138,7 @@ const EditorToolbar = ({ editor, onImageUpload }: EditorToolbarProps) => {
         <LinkIcon className="w-4 h-4" />
       </ToolbarButton>
 
-      <ToolbarButton
-        onClick={onImageUpload}
-        tooltip="Upload Image"
-      >
+      <ToolbarButton onClick={onImageUpload} tooltip="Upload Image">
         <ImageIcon className="w-4 h-4" />
       </ToolbarButton>
 

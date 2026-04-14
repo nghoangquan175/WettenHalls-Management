@@ -15,13 +15,18 @@ import { cn } from '../../utils/cn';
 import { CreateAdminModal } from '../../components/admin/CreateAdminModal';
 import { ConfirmModal } from '../../components/ui/Modal/ConfirmModal';
 import { ActionButton } from '../../components/ui/Button/ActionButton';
-import { adminService, type UserData } from '../../services/adminService';
+import {
+  adminService,
+  type UserData,
+  type InfiniteUserData,
+} from '../../services/adminService';
 import {
   useInfiniteQuery,
   useMutation,
   useQueryClient,
+  type InfiniteData,
 } from '@tanstack/react-query';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { ApiError } from '../../services/api';
 
 import { useDebounce } from '../../hooks/useDebounce';
@@ -119,20 +124,23 @@ const Users = () => {
       const previousUsers = queryClient.getQueryData(['users']);
 
       // Optimistically update to the new value
-      queryClient.setQueryData(['users'], (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages.map((page: any) => ({
-            ...page,
-            users: page.users.map((user: UserData) =>
-              user.id === newPermissions.id
-                ? { ...user, permissions: newPermissions.permissions }
-                : user
-            ),
-          })),
-        };
-      });
+      queryClient.setQueryData(
+        ['users'],
+        (old: InfiniteData<InfiniteUserData> | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              users: page.users.map((user: UserData) =>
+                user.id === newPermissions.id
+                  ? { ...user, permissions: newPermissions.permissions }
+                  : user
+              ),
+            })),
+          };
+        }
+      );
 
       return { previousUsers };
     },
@@ -196,7 +204,7 @@ const Users = () => {
                     statusFilter === status ? 'text-primary' : 'text-gray-500'
                   )}
                   onClick={() => {
-                    setStatusFilter(status as any);
+                    setStatusFilter(status as 'ALL' | 'ACTIVE' | 'INACTIVE');
                     document
                       .getElementById('status-filter-menu')
                       ?.classList.add('hidden');
@@ -245,7 +253,9 @@ const Users = () => {
       {
         header: 'Permissions',
         accessor: (user) => {
-          const mutationVars = permissionsMutation.variables as any;
+          const mutationVars = permissionsMutation.variables as
+            | { id: string; permissions: string[]; permissionType: string }
+            | undefined;
           const isUserUpdating =
             permissionsMutation.isPending && mutationVars?.id === user.id;
 
@@ -337,12 +347,7 @@ const Users = () => {
         className: 'text-right',
       },
     ],
-    [
-      statusFilter,
-      sortOrder,
-      permissionsMutation.isPending,
-      permissionsMutation.variables,
-    ]
+    [statusFilter, sortOrder, permissionsMutation]
   );
 
   return (

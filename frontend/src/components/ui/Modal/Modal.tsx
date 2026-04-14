@@ -17,19 +17,23 @@ interface ModalProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-export const Modal: React.FC<ModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  title, 
-  children, 
+export const Modal: React.FC<ModalProps> = ({
+  isOpen,
+  onClose,
+  title,
+  children,
   footer,
-  size = 'md' 
+  size = 'md',
 }) => {
-  const [isRendered, setIsRendered] = useState(false);
+  const [isRendered, setIsRendered] = useState(isOpen);
+
+  // Sync state with prop during render to avoid cascading renders in useEffect
+  if (isOpen && !isRendered) {
+    setIsRendered(true);
+  }
 
   useEffect(() => {
     if (isOpen) {
-      setIsRendered(true);
       document.body.style.overflow = 'hidden';
     } else {
       const timer = setTimeout(() => setIsRendered(false), 300);
@@ -49,30 +53,34 @@ export const Modal: React.FC<ModalProps> = ({
     sm: 'max-w-md',
     md: 'max-w-xl',
     lg: 'max-w-3xl',
-    xl: 'max-w-5xl'
+    xl: 'max-w-5xl',
   };
 
   return createPortal(
-    <div className={cn(
-      "fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 m-0",
-      isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-    )}>
+    <div
+      className={cn(
+        'fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 m-0',
+        isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+      )}
+    >
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
-      
+
       {/* Modal Content */}
-      <div className={cn(
-        "relative w-full bg-white rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 transform",
-        sizeClasses[size],
-        isOpen ? "scale-100 translate-y-0" : "scale-95 translate-y-4"
-      )}>
+      <div
+        className={cn(
+          'relative w-full bg-white rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 transform',
+          sizeClasses[size],
+          isOpen ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
+        )}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <h3 className="DisplaySBold text-gray-900 font-bold">{title}</h3>
-          <button 
+          <button
             onClick={onClose}
             className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-xl transition-all"
           >

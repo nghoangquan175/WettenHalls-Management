@@ -12,19 +12,13 @@ import Articles from '../pages/admin/Articles';
 import ArticleForm from '../pages/admin/ArticleForm';
 import Settings from '../pages/admin/Settings';
 import ArticlePreview from '../pages/admin/ArticlePreview';
+import { CreateArticleWrapper } from './RouteWrappers';
 
-// Helper for permissions (we'll need to wrap components that need this check)
-const CreateArticleWrapper = () => {
-  return (
-    <AuthGuard allowedRoles={["SUPER_ADMIN", "ADMIN"]} requirePermission="CREATE">
-      <ArticleForm />
-    </AuthGuard>
-  );
-};
+// Routes Configuration
 
 export const router = createBrowserRouter([
   {
-    path: "/login",
+    path: '/login',
     element: (
       <AuthLayout>
         <LoginPage />
@@ -32,17 +26,17 @@ export const router = createBrowserRouter([
     ),
   },
   {
-    path: "/users/article/:id/preview",
+    path: '/users/article/:id/preview',
     element: (
-      <AuthGuard allowedRoles={["SUPER_ADMIN", "ADMIN"]}>
+      <AuthGuard allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
         <ArticlePreview />
       </AuthGuard>
     ),
   },
   {
-    path: "/users",
+    path: '/users',
     element: (
-      <AuthGuard allowedRoles={["SUPER_ADMIN", "ADMIN"]}>
+      <AuthGuard allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
         <MainLayout />
       </AuthGuard>
     ),
@@ -52,50 +46,50 @@ export const router = createBrowserRouter([
         element: <Dashboard />,
       },
       {
-        path: "user",
+        path: 'user',
         element: (
-          <AuthGuard allowedRoles={["SUPER_ADMIN"]}>
+          <AuthGuard allowedRoles={['SUPER_ADMIN']}>
             <Users />
           </AuthGuard>
         ),
       },
       {
-        path: "article",
+        path: 'article',
         children: [
           {
             index: true,
             element: <Articles />,
           },
           {
-            path: "create",
+            path: 'create',
             element: <CreateArticleWrapper />,
           },
           {
-            path: ":id/edit",
+            path: ':id/edit',
             element: <ArticleForm />,
           },
-        ]
+        ],
       },
       {
-        path: "setting",
+        path: 'setting',
         element: <Settings />,
       },
       {
-        path: "*",
+        path: '*',
         element: <Navigate to="/404" replace />,
       },
     ],
   },
   {
-    path: "/",
+    path: '/',
     element: <Navigate to="/users" replace />,
   },
   {
-    path: "/404",
+    path: '/404',
     element: <NotFoundPage />,
   },
   {
-    path: "*",
+    path: '*',
     element: <NotFoundPage />,
   },
 ]);

@@ -1,5 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { getRolePrefix, type UserRole } from '../constants/navigation';
 
 interface AuthGuardProps {
@@ -8,7 +8,11 @@ interface AuthGuardProps {
   requirePermission?: string;
 }
 
-export const AuthGuard = ({ children, allowedRoles, requirePermission }: AuthGuardProps) => {
+export const AuthGuard = ({
+  children,
+  allowedRoles,
+  requirePermission,
+}: AuthGuardProps) => {
   const { user } = useAuth();
   const location = useLocation();
 
@@ -20,7 +24,11 @@ export const AuthGuard = ({ children, allowedRoles, requirePermission }: AuthGua
     return <Navigate to={getRolePrefix(user.role) || '/login'} replace />;
   }
 
-  if (requirePermission && user.role !== 'SUPER_ADMIN' && !user.permissions?.includes(requirePermission)) {
+  if (
+    requirePermission &&
+    user.role !== 'SUPER_ADMIN' &&
+    !user.permissions?.includes(requirePermission)
+  ) {
     return <Navigate to={getRolePrefix(user.role) || '/login'} replace />;
   }
 

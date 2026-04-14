@@ -1,17 +1,30 @@
-import { useMemo, useState } from "react";
-import { NavLink } from "react-router-dom";
-import { LogOut } from "lucide-react";
-import { NAV_ITEMS, getRolePrefix } from "../../constants/navigation";
-import { Button } from "../ui/Button/Button";
-import { cn } from "../../utils/cn";
-import { useAuth } from "../../contexts/AuthContext";
-import { formatRoleName } from "../../utils/format";
-import { ConfirmModal } from "../ui/Modal/ConfirmModal";
+import { useMemo, useState } from 'react';
+import { NavLink } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
+import { NAV_ITEMS, getRolePrefix } from '../../constants/navigation';
+import { Button } from '../ui/Button/Button';
+import { cn } from '../../utils/cn';
+import { useAuth } from '../../hooks/useAuth';
+import { formatRoleName } from '../../utils/format';
+import { ConfirmModal } from '../ui/Modal/ConfirmModal';
 
 const Sidebar = () => {
   const { user, logout } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const filteredNavItems = useMemo(() => {
+    if (!user) return [];
+    return NAV_ITEMS.filter((item) => {
+      if (!item.roles.includes(user.role)) return false;
+      if (item.permissions && item.permissions.length > 0) {
+        if (user.role === 'ADMIN') {
+          return item.permissions.some((p) => user.permissions?.includes(p));
+        }
+      }
+      return true;
+    });
+  }, [user]);
 
   if (!user) return null;
 
@@ -24,19 +37,6 @@ const Sidebar = () => {
       setShowLogoutConfirm(false);
     }
   };
-
-  const filteredNavItems = useMemo(
-    () => NAV_ITEMS.filter((item) => {
-      if (!item.roles.includes(user.role)) return false;
-      if (item.permissions && item.permissions.length > 0) {
-        if (user.role === 'ADMIN') {
-          return item.permissions.some(p => user.permissions?.includes(p));
-        }
-      }
-      return true;
-    }),
-    [user]
-  );
 
   const prefix = getRolePrefix(user.role);
 
@@ -53,18 +53,19 @@ const Sidebar = () => {
       <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
         {filteredNavItems.map((item) => {
           const Icon = item.icon;
-          const fullPath = `${prefix}/${item.path}`.replace(/\/$/, "");
+          const fullPath = `${prefix}/${item.path}`.replace(/\/$/, '');
 
           return (
             <NavLink
               key={item.path}
               to={fullPath}
-              end={item.path === ""}
+              end={item.path === ''}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group cursor-pointer",
-                  "ContentMMedium text-gray-600 hover:bg-gray-100 hover:text-primary",
-                  isActive && "bg-primary/10 text-primary border-r-4 border-primary rounded-r-none"
+                  'flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group cursor-pointer',
+                  'ContentMMedium text-gray-600 hover:bg-gray-100 hover:text-primary',
+                  isActive &&
+                    'bg-primary/10 text-primary border-r-4 border-primary rounded-r-none'
                 )
               }
             >
@@ -72,8 +73,10 @@ const Sidebar = () => {
                 <>
                   <Icon
                     className={cn(
-                      "w-5 h-5 transition-colors duration-200",
-                      isActive ? "text-primary" : "text-gray-400 group-hover:text-primary"
+                      'w-5 h-5 transition-colors duration-200',
+                      isActive
+                        ? 'text-primary'
+                        : 'text-gray-400 group-hover:text-primary'
                     )}
                   />
                   <span>{item.label}</span>
@@ -99,7 +102,7 @@ const Sidebar = () => {
             </span>
           </div>
         </div>
-        
+
         <Button
           variant="danger"
           className="w-full justify-start gap-3 h-11"
@@ -107,7 +110,7 @@ const Sidebar = () => {
           isLoading={isLoggingOut}
           leftIcon={<LogOut className="w-4 h-4" />}
         >
-          {isLoggingOut ? "Logging out..." : "Logout"}
+          {isLoggingOut ? 'Logging out...' : 'Logout'}
         </Button>
       </div>
 

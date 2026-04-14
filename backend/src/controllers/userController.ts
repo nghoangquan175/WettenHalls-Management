@@ -1,17 +1,21 @@
 import { Request, Response } from 'express';
-import User from '../models/User';
-import Article from '../models/Article';
+import { QueryFilter } from 'mongoose';
+import User, { IUser } from '../models/User';
+import Article, { IArticle } from '../models/Article';
 
-export const getDashboardStats = async (req: Request, res: Response): Promise<void> => {
+export const getDashboardStats = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const userRole = req.session.user?.role;
     const isSuperAdmin = userRole === 'SUPER_ADMIN';
-    
+
     const userId = req.session.user?.id;
     const userPermissions = req.session.user?.permissions || [];
 
     // Base query for non-deleted articles
-    let baseQuery: any = { isDeleted: { $ne: true } };
+    let baseQuery: QueryFilter<IArticle> = { isDeleted: { $ne: true } };
 
     // Apply Visibility Logic
     if (userRole !== 'SUPER_ADMIN') {
@@ -26,50 +30,56 @@ export const getDashboardStats = async (req: Request, res: Response): Promise<vo
             {
               $or: [
                 { status: { $in: ['PENDING', 'PUBLISHED', 'UNPUBLISHED'] } },
-                { poster: userId }
-              ]
-            }
-          ]
+                { poster: userId },
+              ],
+            },
+          ],
         };
       }
     }
 
     const articleCount = await Article.countDocuments(baseQuery);
-    
+
     // Published count: combine base visibility query with status: 'PUBLISHED'
-    const publishedQuery = { 
+    const publishedQuery: QueryFilter<IArticle> = {
       ...baseQuery,
-      status: 'PUBLISHED'
+      status: 'PUBLISHED',
     };
-    
+
     // If baseQuery had an $and (from VIEW permission), we need to be careful with spreading
-    let finalPublishedQuery = publishedQuery;
+    let finalPublishedQuery: QueryFilter<IArticle> = publishedQuery;
     if (baseQuery.$and) {
-        finalPublishedQuery = {
-            $and: [...baseQuery.$and, { status: 'PUBLISHED' }]
-        };
+      finalPublishedQuery = {
+        $and: [...baseQuery.$and, { status: 'PUBLISHED' }],
+      };
     }
 
-    const publishedArticleCount = await Article.countDocuments(finalPublishedQuery);
+    const publishedArticleCount =
+      await Article.countDocuments(finalPublishedQuery);
 
-    const stats: any = {
+    const stats: Record<string, number> = {
       articleCount,
-      publishedArticleCount
+      publishedArticleCount,
     };
 
     // Only fetch and return user counts for SUPER_ADMIN
     if (isSuperAdmin) {
-      stats.superAdminCount = await User.countDocuments({ role: 'SUPER_ADMIN' });
+      stats.superAdminCount = await User.countDocuments({
+        role: 'SUPER_ADMIN',
+      });
       stats.adminCount = await User.countDocuments({ role: 'ADMIN' });
     }
 
     res.status(200).json(stats);
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ message: 'Server error while fetching stats' });
   }
 };
 
-export const createUser = async (req: Request, res: Response): Promise<void> => {
+export const createUser = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const { name, email, password, role } = req.body;
 
   try {
@@ -77,9 +87,9 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     const userExists = await User.findOne({ email });
 
     if (userExists) {
-      res.status(400).json({ 
+      res.status(400).json({
         message: 'Email đã được sử dụng bởi một tài khoản khác',
-        code: 'EMAIL_ALREADY_EXISTS'
+        code: 'EMAIL_ALREADY_EXISTS',
       });
       return;
     }
@@ -90,7 +100,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       email,
       password,
       role,
-      permissions: ['VIEW'] // default permission
+      permissions: ['VIEW'], // default permission
     });
 
     if (user) {
@@ -98,7 +108,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     } else {
       res.status(400).json({ message: 'Dữ liệu người dùng không hợp lệ' });
     }
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ message: 'Lỗi hệ thống khi tạo tài khoản' });
   }
 };
@@ -108,15 +118,15 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
     const { search, status, sort, page = '1', limit = '10' } = req.query;
     const pageNum = parseInt(page as string, 10);
     const limitNum = parseInt(limit as string, 10);
-    
-    let query: any = { role: { $in: ['ADMIN', 'GUEST'] } };
+
+    const query: QueryFilter<IUser> = { role: { $in: ['ADMIN', 'GUEST'] } };
 
     if (search) {
       const searchRegex = new RegExp(search as string, 'i');
       query.$or = [
         { name: searchRegex },
         { email: searchRegex },
-        { role: searchRegex }
+        { role: searchRegex },
       ];
     }
 
@@ -125,34 +135,39 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
     }
 
     const sortOrder = sort === 'asc' ? 1 : -1;
-    
+
     const totalUsers = await User.countDocuments(query);
     const users = await User.find(query, '-password')
       .sort({ createdAt: sortOrder })
       .skip((pageNum - 1) * limitNum)
       .limit(limitNum);
-    
+
     const hasNextPage = pageNum * limitNum < totalUsers;
 
     res.status(200).json({
-      users: users.map(user => ({
+      users: users.map((user) => ({
         id: user._id.toString(),
         name: user.name,
         email: user.email,
         role: user.role,
         permissions: user.permissions || [],
         status: user.status || 'ACTIVE',
-        createdAt: user.createdAt.toISOString().split('T')[0]
+        createdAt: user.createdAt.toISOString().split('T')[0],
       })),
       hasNextPage,
-      nextPage: hasNextPage ? pageNum + 1 : null
+      nextPage: hasNextPage ? pageNum + 1 : null,
     });
-  } catch (error) {
-    res.status(500).json({ message: 'Lỗi hệ thống khi lấy danh sách người dùng' });
+  } catch (_error) {
+    res
+      .status(500)
+      .json({ message: 'Lỗi hệ thống khi lấy danh sách người dùng' });
   }
 };
 
-export const updateUserStatus = async (req: Request, res: Response): Promise<void> => {
+export const updateUserStatus = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const { id } = req.params;
   const { status } = req.body;
 
@@ -178,12 +193,15 @@ export const updateUserStatus = async (req: Request, res: Response): Promise<voi
     await user.save();
 
     res.status(200).json({ message: 'Status updated successfully', user });
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ message: 'Server error while updating status' });
   }
 };
 
-export const deleteUser = async (req: Request, res: Response): Promise<void> => {
+export const deleteUser = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const { id } = req.params;
 
   try {
@@ -198,21 +216,26 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
       res.status(400).json({ message: 'Cannot delete your own account' });
       return;
     }
-    
+
     if (user.role === 'SUPER_ADMIN') {
-      res.status(403).json({ message: 'Super Administrators cannot be deleted' });
+      res
+        .status(403)
+        .json({ message: 'Super Administrators cannot be deleted' });
       return;
     }
 
     await User.findByIdAndDelete(id);
-    
+
     res.status(200).json({ message: 'User deleted successfully' });
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ message: 'Server error while deleting user' });
   }
 };
 
-export const updateUserPermissions = async (req: Request, res: Response): Promise<void> => {
+export const updateUserPermissions = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const { id } = req.params;
   const { permissions } = req.body;
 
@@ -222,11 +245,23 @@ export const updateUserPermissions = async (req: Request, res: Response): Promis
       return;
     }
 
-    const validPermissions = ['VIEW', 'CREATE', 'PUBLISH_TOGGLE', 'EDIT', 'DELETE'];
-    const invalidPermissions = permissions.filter(p => !validPermissions.includes(p));
+    const validPermissions = [
+      'VIEW',
+      'CREATE',
+      'PUBLISH_TOGGLE',
+      'EDIT',
+      'DELETE',
+    ];
+    const invalidPermissions = permissions.filter(
+      (p) => !validPermissions.includes(p)
+    );
 
     if (invalidPermissions.length > 0) {
-      res.status(400).json({ message: `Quyền không hợp lệ: ${invalidPermissions.join(', ')}` });
+      res
+        .status(400)
+        .json({
+          message: `Quyền không hợp lệ: ${invalidPermissions.join(', ')}`,
+        });
       return;
     }
 
@@ -238,15 +273,24 @@ export const updateUserPermissions = async (req: Request, res: Response): Promis
 
     // Prevent modifying super admin permissions entirely
     if (user.role === 'SUPER_ADMIN') {
-      res.status(403).json({ message: 'Không thể chỉnh sửa quyền hạn của SUPER_ADMIN' });
+      res
+        .status(403)
+        .json({ message: 'Không thể chỉnh sửa quyền hạn của SUPER_ADMIN' });
       return;
     }
 
     user.permissions = permissions;
     await user.save();
 
-    res.status(200).json({ message: 'Permissions updated successfully', permissions: user.permissions });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error while updating permissions' });
+    res
+      .status(200)
+      .json({
+        message: 'Permissions updated successfully',
+        permissions: user.permissions,
+      });
+  } catch (_error) {
+    res
+      .status(500)
+      .json({ message: 'Server error while updating permissions' });
   }
 };

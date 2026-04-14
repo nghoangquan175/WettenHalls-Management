@@ -1,21 +1,21 @@
 import { Router } from 'express';
-import { 
-    createArticle, 
-    getArticles, 
-    getArticleById, 
-    updateArticle, 
-    deleteArticle,
-    updateArticleStatus,
-    getTrash,
-    restoreArticle,
-    permanentDelete,
-    getPublishedArticles,
-    getArticleBySlug
+import {
+  createArticle,
+  getArticles,
+  getArticleById,
+  updateArticle,
+  deleteArticle,
+  updateArticleStatus,
+  getTrash,
+  restoreArticle,
+  permanentDelete,
+  getPublishedArticles,
+  getArticleBySlug,
 } from '../controllers/articleController';
-import { isAuthenticated, authorizeRoles } from '../middleware/authMiddleware';
+import { isAuthenticated } from '../middleware/authMiddleware';
 
 const router = Router();
- 
+
 // Public Routes
 router.get('/published', getPublishedArticles);
 router.get('/public/:slug', getArticleBySlug);

@@ -1,8 +1,11 @@
 import { Request, Response } from 'express';
-import Article from '../models/Article';
-import mongoose from 'mongoose';
+import Article, { IArticle } from '../models/Article';
+import { QueryFilter, Types } from 'mongoose';
 
-export const createArticle = async (req: Request, res: Response): Promise<void> => {
+export const createArticle = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { title, description, content, thumbnail, status } = req.body;
     const poster = req.session.user?.id;
@@ -27,16 +30,19 @@ export const createArticle = async (req: Request, res: Response): Promise<void> 
       content,
       thumbnail,
       status: finalStatus,
-      poster
+      poster,
     });
 
     res.status(201).json(article);
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ message: 'Error creating article' });
   }
 };
 
-export const getArticles = async (req: Request, res: Response): Promise<void> => {
+export const getArticles = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { search, status, sort, page = '1', limit = '10' } = req.query;
     const pageNum = parseInt(page as string, 10);
@@ -46,24 +52,24 @@ export const getArticles = async (req: Request, res: Response): Promise<void> =>
     const userRole = req.session.user?.role;
     const userPermissions = req.session.user?.permissions || [];
 
-    let query: any = { isDeleted: { $ne: true } };
+    let query: QueryFilter<IArticle> = { isDeleted: { $ne: true } };
 
     // Apply VIEW permission restriction first
     if (userRole !== 'SUPER_ADMIN' && !userPermissions.includes('VIEW')) {
-      query.poster = new mongoose.Types.ObjectId(userId);
+      query.poster = new Types.ObjectId(userId);
     } else {
       // Normal Visibility logic: Others' DRAFTS are hidden
       const visibilityQuery = {
         $or: [
           { status: { $in: ['PENDING', 'PUBLISHED', 'UNPUBLISHED'] } },
-          { poster: userId } // Creator can see their own (including DRAFT)
-        ]
+          { poster: userId }, // Creator can see their own (including DRAFT)
+        ],
       };
       query = { $and: [query, visibilityQuery] };
     }
 
-    if (search) {
-      query.title = new RegExp(search as string, 'i');
+    if (typeof search === 'string' && search) {
+      query.title = new RegExp(search, 'i');
     }
 
     if (status && status !== 'ALL') {
@@ -84,14 +90,17 @@ export const getArticles = async (req: Request, res: Response): Promise<void> =>
     res.status(200).json({
       articles,
       hasNextPage,
-      nextPage: hasNextPage ? pageNum + 1 : null
+      nextPage: hasNextPage ? pageNum + 1 : null,
     });
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ message: 'Error fetching articles' });
   }
 };
 
-export const getArticleById = async (req: Request, res: Response): Promise<void> => {
+export const getArticleById = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params;
     const article = await Article.findById(id).populate('poster', 'name email');
@@ -106,24 +115,36 @@ export const getArticleById = async (req: Request, res: Response): Promise<void>
     const userPermissions = req.session.user?.permissions || [];
 
     // General Visibility Check: if no VIEW permission, can only see own article.
-    if (userRole !== 'SUPER_ADMIN' && !userPermissions.includes('VIEW') && article.poster?._id?.toString() !== userId) {
-      res.status(403).json({ message: 'Bạn không có quyền xem bài viết của người khác.' });
+    if (
+      userRole !== 'SUPER_ADMIN' &&
+      !userPermissions.includes('VIEW') &&
+      article.poster?._id?.toString() !== userId
+    ) {
+      res
+        .status(403)
+        .json({ message: 'Bạn không có quyền xem bài viết của người khác.' });
       return;
     }
 
     // Visibility Check: Prevent direct access to others' DRAFTS
-    if (article.status === 'DRAFT' && article.poster?._id?.toString() !== userId) {
+    if (
+      article.status === 'DRAFT' &&
+      article.poster?._id?.toString() !== userId
+    ) {
       res.status(403).json({ message: 'Access denied to this draft article' });
       return;
     }
 
     res.status(200).json(article);
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ message: 'Error fetching article detail' });
   }
 };
 
-export const updateArticle = async (req: Request, res: Response): Promise<void> => {
+export const updateArticle = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params;
     const { title, description, content, thumbnail, status } = req.body;
@@ -151,7 +172,12 @@ export const updateArticle = async (req: Request, res: Response): Promise<void> 
 
       // Can edit if it is their own article OR (they have EDIT permission AND article is UNPUBLISHED)
       if (!isOwner && !(hasEditPerm && isUnpublished)) {
-        res.status(403).json({ message: 'You can only edit your own articles or unpublished articles with the EDIT permission' });
+        res
+          .status(403)
+          .json({
+            message:
+              'You can only edit your own articles or unpublished articles with the EDIT permission',
+          });
         return;
       }
     }
@@ -173,12 +199,15 @@ export const updateArticle = async (req: Request, res: Response): Promise<void> 
     await article.save();
 
     res.status(200).json(article);
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ message: 'Error updating article' });
   }
 };
 
-export const updateArticleStatus = async (req: Request, res: Response): Promise<void> => {
+export const updateArticleStatus = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -193,13 +222,12 @@ export const updateArticleStatus = async (req: Request, res: Response): Promise<
     const userId = req.session.user?.id;
     const userPermissions = req.session.user?.permissions || [];
 
-
     if (userRole === 'ADMIN') {
       const hasTogglePerm = userPermissions.includes('PUBLISH_TOGGLE');
       const isTargetingPublish = ['PUBLISHED', 'UNPUBLISHED'].includes(status);
       const isOwner = article.poster.toString() === userId;
 
-      // Logic: 
+      // Logic:
       // 1. Nếu có quyền TOGGLE và đang gỡ/đăng bài -> Cho phép (mọi bài viết)
       // 2. Nếu là chủ bài viết và đang gửi duyệt/thu hồi -> Cho phép (DRAFT/PENDING)
       if (hasTogglePerm && isTargetingPublish) {
@@ -207,7 +235,9 @@ export const updateArticleStatus = async (req: Request, res: Response): Promise<
       } else if (isOwner && ['DRAFT', 'PENDING'].includes(status)) {
         // Allowed
       } else {
-        res.status(403).json({ message: 'Bạn không có quyền thực hiện thao tác này.' });
+        res
+          .status(403)
+          .json({ message: 'Bạn không có quyền thực hiện thao tác này.' });
         return;
       }
     }
@@ -216,8 +246,9 @@ export const updateArticleStatus = async (req: Request, res: Response): Promise<
     // 1. Chặn thu hồi trực tiếp: PUBLISHED -> DRAFT
     if (status === 'DRAFT' && article.status === 'PUBLISHED') {
       res.status(400).json({
-        message: 'Bài viết đang xuất bản không thể thu hồi trực tiếp về bản nháp.',
-        code: 'REVOKE_PUBLISHED_FORBIDDEN'
+        message:
+          'Bài viết đang xuất bản không thể thu hồi trực tiếp về bản nháp.',
+        code: 'REVOKE_PUBLISHED_FORBIDDEN',
       });
       return;
     }
@@ -225,8 +256,9 @@ export const updateArticleStatus = async (req: Request, res: Response): Promise<
     // 2. Chặn duyệt bài đã thu hồi: DRAFT -> PUBLISHED (SA duyệt bài Admin)
     if (status === 'PUBLISHED' && article.status === 'DRAFT') {
       res.status(400).json({
-        message: 'Bài viết này đã được Admin thu hồi hoặc đang trong trạng thái Nháp. Bạn không thể duyệt lúc này.',
-        code: 'APPROVE_REVOKED_FORBIDDEN'
+        message:
+          'Bài viết này đã được Admin thu hồi hoặc đang trong trạng thái Nháp. Bạn không thể duyệt lúc này.',
+        code: 'APPROVE_REVOKED_FORBIDDEN',
       });
       return;
     }
@@ -236,12 +268,15 @@ export const updateArticleStatus = async (req: Request, res: Response): Promise<
     await article.save();
 
     res.status(200).json(article);
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ message: 'Error updating article status' });
   }
 };
 
-export const deleteArticle = async (req: Request, res: Response): Promise<void> => {
+export const deleteArticle = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params;
     const user = req.session.user;
@@ -259,7 +294,11 @@ export const deleteArticle = async (req: Request, res: Response): Promise<void> 
     const hasDeletePerm = user?.permissions?.includes('DELETE');
 
     if (article.status === 'PUBLISHED' || article.status === 'PENDING') {
-      res.status(403).json({ message: 'Không thể xóa bài viết đang xuất bản hoặc chờ duyệt.' });
+      res
+        .status(403)
+        .json({
+          message: 'Không thể xóa bài viết đang xuất bản hoặc chờ duyệt.',
+        });
       return;
     }
 
@@ -283,11 +322,11 @@ export const deleteArticle = async (req: Request, res: Response): Promise<void> 
     // Soft Delete
     article.isDeleted = true;
     article.deletedAt = new Date();
-    article.deletedBy = new (mongoose.Types.ObjectId as any)(user?.id);
+    article.deletedBy = new Types.ObjectId(user?.id);
     await article.save();
 
     res.status(200).json({ message: 'Article moved to trash' });
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ message: 'Error deleting article' });
   }
 };
@@ -299,12 +338,12 @@ export const getTrash = async (req: Request, res: Response): Promise<void> => {
     const pageNum = parseInt(page as string, 10);
     const limitNum = parseInt(limit as string, 10);
 
-    let query: any = {
+    const query: QueryFilter<IArticle> = {
       isDeleted: true,
       $or: [
         { status: { $in: ['PUBLISHED', 'UNPUBLISHED'] } },
-        { status: 'DRAFT', poster: user?.id }
-      ]
+        { status: 'DRAFT', poster: user?.id },
+      ],
     };
 
     if (search) {
@@ -324,14 +363,17 @@ export const getTrash = async (req: Request, res: Response): Promise<void> => {
     res.status(200).json({
       articles,
       hasNextPage,
-      nextPage: hasNextPage ? pageNum + 1 : null
+      nextPage: hasNextPage ? pageNum + 1 : null,
     });
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ message: 'Error fetching trash' });
   }
 };
 
-export const restoreArticle = async (req: Request, res: Response): Promise<void> => {
+export const restoreArticle = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params;
     const user = req.session.user;
@@ -339,7 +381,7 @@ export const restoreArticle = async (req: Request, res: Response): Promise<void>
     const isSA = user?.role === 'SUPER_ADMIN';
     const hasDeletePerm = user?.permissions?.includes('DELETE');
 
-    let query: any = { _id: id, isDeleted: true };
+    const query: QueryFilter<IArticle> = { _id: id, isDeleted: true };
     if (!isSA && !hasDeletePerm) {
       query.deletedBy = user?.id;
     }
@@ -357,12 +399,15 @@ export const restoreArticle = async (req: Request, res: Response): Promise<void>
     await article.save();
 
     res.status(200).json(article);
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ message: 'Error restoring article' });
   }
 };
 
-export const permanentDelete = async (req: Request, res: Response): Promise<void> => {
+export const permanentDelete = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params;
     const user = req.session.user;
@@ -370,7 +415,7 @@ export const permanentDelete = async (req: Request, res: Response): Promise<void
     const isSA = user?.role === 'SUPER_ADMIN';
     const hasDeletePerm = user?.permissions?.includes('DELETE');
 
-    let query: any = { _id: id, isDeleted: true };
+    const query: QueryFilter<IArticle> = { _id: id, isDeleted: true };
     if (!isSA && !hasDeletePerm) {
       query.deletedBy = user?.id;
     }
@@ -385,12 +430,15 @@ export const permanentDelete = async (req: Request, res: Response): Promise<void
     await Article.findByIdAndDelete(id);
 
     res.status(200).json({ message: 'Article permanently deleted' });
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ message: 'Error permanently deleting article' });
   }
 };
 
-export const getPublishedArticles = async (req: Request, res: Response): Promise<void> => {
+export const getPublishedArticles = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { page = '1', limit = '10' } = req.query;
     const pageNum = parseInt(page as string, 10);
@@ -398,7 +446,7 @@ export const getPublishedArticles = async (req: Request, res: Response): Promise
 
     const query = {
       status: 'PUBLISHED',
-      isDeleted: { $ne: true }
+      isDeleted: { $ne: true },
     };
 
     const total = await Article.countDocuments(query);
@@ -414,20 +462,23 @@ export const getPublishedArticles = async (req: Request, res: Response): Promise
       articles,
       hasNextPage,
       nextPage: hasNextPage ? pageNum + 1 : null,
-      total
+      total,
     });
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ message: 'Error fetching public articles' });
   }
 };
 
-export const getArticleBySlug = async (req: Request, res: Response): Promise<void> => {
+export const getArticleBySlug = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { slug } = req.params;
     const article = await Article.findOne({
       slug,
       status: 'PUBLISHED',
-      isDeleted: { $ne: true }
+      isDeleted: { $ne: true },
     }).populate('poster', 'name');
 
     if (!article) {
@@ -436,8 +487,7 @@ export const getArticleBySlug = async (req: Request, res: Response): Promise<voi
     }
 
     res.status(200).json(article);
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ message: 'Error fetching article detail' });
   }
 };
-

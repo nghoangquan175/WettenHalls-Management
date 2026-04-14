@@ -24,11 +24,14 @@ interface CreateAdminModalProps {
   onClose: () => void;
 }
 
-export const CreateAdminModal: React.FC<CreateAdminModalProps> = ({ isOpen, onClose }) => {
+export const CreateAdminModal: React.FC<CreateAdminModalProps> = ({
+  isOpen,
+  onClose,
+}) => {
   const queryClient = useQueryClient();
   const [showConfirm, setShowConfirm] = useState(false);
   const [formData, setFormData] = useState<CreateAdminFormValues | null>(null);
-  
+
   const {
     register,
     handleSubmit,
@@ -51,7 +54,7 @@ export const CreateAdminModal: React.FC<CreateAdminModalProps> = ({ isOpen, onCl
     },
     onSettled: () => {
       setShowConfirm(false);
-    }
+    },
   });
 
   const handleClose = () => {
@@ -80,15 +83,15 @@ export const CreateAdminModal: React.FC<CreateAdminModalProps> = ({ isOpen, onCl
         title="Create New Administrator"
         footer={
           <div className="flex gap-3">
-            <Button 
-              variant="outline" 
-              onClick={handleClose} 
+            <Button
+              variant="outline"
+              onClick={handleClose}
               disabled={mutation.isPending}
             >
               Cancel
             </Button>
-            <Button 
-              variant="primary" 
+            <Button
+              variant="primary"
               onClick={handleSubmit(onPreSubmit)}
               disabled={mutation.isPending}
             >
@@ -100,7 +103,9 @@ export const CreateAdminModal: React.FC<CreateAdminModalProps> = ({ isOpen, onCl
         <form onSubmit={handleSubmit(onPreSubmit)} className="space-y-4">
           {mutation.isError && (
             <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-sm animate-in fade-in duration-300">
-              {(mutation.error as any)?.message || 'An error occurred while creating the account'}
+              {mutation.error instanceof Error
+                ? mutation.error.message
+                : 'An error occurred while creating the account'}
             </div>
           )}
 
@@ -139,10 +144,14 @@ export const CreateAdminModal: React.FC<CreateAdminModalProps> = ({ isOpen, onCl
         title="Confirm Account Creation"
         message={
           <>
-            Are you sure you want to create a new administrator account for 
-            <span className="font-bold text-gray-900 mx-1">{formData?.name}</span>?
+            Are you sure you want to create a new administrator account for
+            <span className="font-bold text-gray-900 mx-1">
+              {formData?.name}
+            </span>
+            ?
             <br />
-            An invitation will be sent to <span className="font-medium text-primary">{formData?.email}</span>.
+            An invitation will be sent to{' '}
+            <span className="font-medium text-primary">{formData?.email}</span>.
           </>
         }
         confirmText="Confirm Creation"
