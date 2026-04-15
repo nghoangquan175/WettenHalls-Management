@@ -111,18 +111,21 @@ const Users = () => {
       const previousQueries = queryClient.getQueriesData({
         queryKey: ['users'],
       });
-      queryClient.setQueriesData({ queryKey: ['users'] }, (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages.map((page: any) => ({
-            ...page,
-            users: page.users.map((user: any) =>
-              user.id === id ? { ...user, status } : user
-            ),
-          })),
-        };
-      });
+      queryClient.setQueriesData(
+        { queryKey: ['users'] },
+        (old: InfiniteData<InfiniteUserData> | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page: InfiniteUserData) => ({
+              ...page,
+              users: page.users.map((user: UserData) =>
+                user.id === id ? { ...user, status } : user
+              ),
+            })),
+          };
+        }
+      );
 
       return { previousQueries };
     },
@@ -184,20 +187,23 @@ const Users = () => {
       const previousUsers = queryClient.getQueriesData({
         queryKey: ['users'],
       });
-      queryClient.setQueriesData({ queryKey: ['users'] }, (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages.map((page: any) => ({
-            ...page,
-            users: page.users.map((user: UserData) =>
-              user.id === newPermissions.id
-                ? { ...user, permissions: newPermissions.permissions }
-                : user
-            ),
-          })),
-        };
-      });
+      queryClient.setQueriesData(
+        { queryKey: ['users'] },
+        (old: InfiniteData<InfiniteUserData> | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page: InfiniteUserData) => ({
+              ...page,
+              users: page.users.map((user: UserData) =>
+                user.id === newPermissions.id
+                  ? { ...user, permissions: newPermissions.permissions }
+                  : user
+              ),
+            })),
+          };
+        }
+      );
 
       return { previousUsers };
     },
