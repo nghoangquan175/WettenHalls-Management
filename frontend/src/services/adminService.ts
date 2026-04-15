@@ -48,12 +48,14 @@ export const adminService = {
     status?: string,
     sort?: 'asc' | 'desc',
     page: number = 1,
-    limit: number = 10
+    limit: number = 10,
+    role?: string
   ): Promise<InfiniteUserData> => {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     if (status) params.append('status', status);
     if (sort) params.append('sort', sort);
+    if (role) params.append('role', role);
     params.append('page', page.toString());
     params.append('limit', limit.toString());
 

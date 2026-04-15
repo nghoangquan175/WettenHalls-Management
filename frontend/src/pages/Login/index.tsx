@@ -36,7 +36,9 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { login, connectionError, authError, clearAuthError } = useAuth();
+  const { user, login, connectionError, authError, clearAuthError } = useAuth();
+
+  if (user) navigate('/users');
 
   const {
     register,
