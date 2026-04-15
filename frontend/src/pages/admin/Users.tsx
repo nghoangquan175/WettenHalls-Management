@@ -96,38 +96,41 @@ const Users = () => {
   };
 
   const statusMutation = useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       id,
       status,
     }: {
       id: string;
       status: 'ACTIVE' | 'INACTIVE';
-    }) => adminService.updateUserStatus(id, status),
+    }) => {
+      return adminService.updateUserStatus(id, status);
+    },
     onMutate: async ({ id, status }) => {
-      handleCloseModals(); // Close modal immediately
+      handleCloseModals();
       await queryClient.cancelQueries({ queryKey: ['users'] });
-      const previousUsers = queryClient.getQueryData(['users']);
+      const previousQueries = queryClient.getQueriesData({
+        queryKey: ['users'],
+      });
+      queryClient.setQueriesData({ queryKey: ['users'] }, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            users: page.users.map((user: any) =>
+              user.id === id ? { ...user, status } : user
+            ),
+          })),
+        };
+      });
 
-      queryClient.setQueryData(
-        ['users'],
-        (old: InfiniteData<InfiniteUserData> | undefined) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              users: page.users.map((user: UserData) =>
-                user.id === id ? { ...user, status } : user
-              ),
-            })),
-          };
-        }
-      );
-      return { previousUsers };
+      return { previousQueries };
     },
     onError: (_err, _vars, context) => {
-      if (context?.previousUsers) {
-        queryClient.setQueryData(['users'], context.previousUsers);
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(([queryKey, oldData]) => {
+          queryClient.setQueryData(queryKey, oldData);
+        });
       }
     },
     onSettled: () => {
@@ -177,41 +180,35 @@ const Users = () => {
       permissionType: string;
     }) => adminService.updateUserPermissions(id, permissions),
     onMutate: async (newPermissions) => {
-      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
       await queryClient.cancelQueries({ queryKey: ['users'] });
-
-      // Snapshot the previous value
-      const previousUsers = queryClient.getQueryData(['users']);
-
-      // Optimistically update to the new value
-      queryClient.setQueryData(
-        ['users'],
-        (old: InfiniteData<InfiniteUserData> | undefined) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              users: page.users.map((user: UserData) =>
-                user.id === newPermissions.id
-                  ? { ...user, permissions: newPermissions.permissions }
-                  : user
-              ),
-            })),
-          };
-        }
-      );
+      const previousUsers = queryClient.getQueriesData({
+        queryKey: ['users'],
+      });
+      queryClient.setQueriesData({ queryKey: ['users'] }, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            users: page.users.map((user: UserData) =>
+              user.id === newPermissions.id
+                ? { ...user, permissions: newPermissions.permissions }
+                : user
+            ),
+          })),
+        };
+      });
 
       return { previousUsers };
     },
     onError: (_err, _newPermissions, context) => {
-      // Rollback to the previous value if mutation fails
       if (context?.previousUsers) {
-        queryClient.setQueryData(['users'], context.previousUsers);
+        context.previousUsers.forEach(([queryKey, oldData]) => {
+          queryClient.setQueryData(queryKey, oldData);
+        });
       }
     },
     onSuccess: () => {
-      // Only refetch after success to ensure consistency
       queryClient.invalidateQueries({ queryKey: ['users'] });
     },
   });
