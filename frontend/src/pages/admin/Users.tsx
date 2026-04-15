@@ -38,6 +38,9 @@ const Users = () => {
   const [statusFilter, setStatusFilter] = useState<
     'ALL' | 'ACTIVE' | 'INACTIVE'
   >('ALL');
+  const [roleFilter, setRoleFilter] = useState<'ALL' | 'ADMIN' | 'GUEST'>(
+    'ALL'
+  );
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [actionType, setActionType] = useState<'status' | 'delete' | null>(
@@ -57,14 +60,21 @@ const Users = () => {
   } = useInfiniteQuery({
     queryKey: [
       'users',
-      { search: debouncedSearch, status: statusFilter, sort: sortOrder },
+      {
+        search: debouncedSearch,
+        status: statusFilter,
+        role: roleFilter,
+        sort: sortOrder,
+      },
     ],
     queryFn: ({ pageParam = 1 }) =>
       adminService.getUsers(
         debouncedSearch,
         statusFilter === 'ALL' ? undefined : statusFilter,
         sortOrder,
-        pageParam as number
+        pageParam as number,
+        10,
+        roleFilter === 'ALL' ? undefined : roleFilter
       ),
     getNextPageParam: (lastPage) => lastPage.nextPage,
     initialPageParam: 1,
@@ -93,17 +103,67 @@ const Users = () => {
       id: string;
       status: 'ACTIVE' | 'INACTIVE';
     }) => adminService.updateUserStatus(id, status),
-    onSuccess: () => {
+    onMutate: async ({ id, status }) => {
+      handleCloseModals(); // Close modal immediately
+      await queryClient.cancelQueries({ queryKey: ['users'] });
+      const previousUsers = queryClient.getQueryData(['users']);
+
+      queryClient.setQueryData(
+        ['users'],
+        (old: InfiniteData<InfiniteUserData> | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              users: page.users.map((user: UserData) =>
+                user.id === id ? { ...user, status } : user
+              ),
+            })),
+          };
+        }
+      );
+      return { previousUsers };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousUsers) {
+        queryClient.setQueryData(['users'], context.previousUsers);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      handleCloseModals();
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => adminService.deleteUser(id),
-    onSuccess: () => {
+    onMutate: async (id) => {
+      handleCloseModals(); // Close modal immediately
+      await queryClient.cancelQueries({ queryKey: ['users'] });
+      const previousUsers = queryClient.getQueryData(['users']);
+
+      queryClient.setQueryData(
+        ['users'],
+        (old: InfiniteData<InfiniteUserData> | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              users: page.users.filter((user: UserData) => user.id !== id),
+            })),
+          };
+        }
+      );
+      return { previousUsers };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousUsers) {
+        queryClient.setQueryData(['users'], context.previousUsers);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      handleCloseModals();
     },
   });
 
@@ -150,8 +210,8 @@ const Users = () => {
         queryClient.setQueryData(['users'], context.previousUsers);
       }
     },
-    onSettled: () => {
-      // Always refetch after error or success to ensure we have the correct data
+    onSuccess: () => {
+      // Only refetch after success to ensure consistency
       queryClient.invalidateQueries({ queryKey: ['users'] });
     },
   });
@@ -177,7 +237,57 @@ const Users = () => {
           </div>
         ),
       },
-
+      {
+        header: (
+          <div className="relative group/filter">
+            <button
+              className="flex items-center gap-1 hover:text-gray-900 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                const menu = document.getElementById('role-filter-menu');
+                if (menu) menu.classList.toggle('hidden');
+              }}
+            >
+              Role
+              <ChevronDown className="w-3 h-3" />
+            </button>
+            <div
+              id="role-filter-menu"
+              className="hidden absolute top-full left-0 mt-2 w-32 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50 animate-in fade-in zoom-in-95 duration-200"
+            >
+              {['ALL', 'ADMIN', 'GUEST'].map((role) => (
+                <button
+                  key={role}
+                  className={cn(
+                    'w-full px-4 py-2 text-left text-[10px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-colors',
+                    roleFilter === role ? 'text-primary' : 'text-gray-500'
+                  )}
+                  onClick={() => {
+                    setRoleFilter(role as 'ALL' | 'ADMIN' | 'GUEST');
+                    document
+                      .getElementById('role-filter-menu')
+                      ?.classList.add('hidden');
+                  }}
+                >
+                  {role}
+                </button>
+              ))}
+            </div>
+          </div>
+        ),
+        accessor: (user) => (
+          <div
+            className={cn(
+              'inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest',
+              user.role === 'ADMIN'
+                ? 'bg-blue-500/10 text-blue-500'
+                : 'bg-purple-500/10 text-purple-500'
+            )}
+          >
+            {user.role}
+          </div>
+        ),
+      },
       {
         header: (
           <div className="relative group/filter">
@@ -347,7 +457,7 @@ const Users = () => {
         className: 'text-right',
       },
     ],
-    [statusFilter, sortOrder, permissionsMutation]
+    [statusFilter, roleFilter, sortOrder, permissionsMutation]
   );
 
   return (

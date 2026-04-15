@@ -115,11 +115,17 @@ export const createUser = async (
 
 export const getUsers = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { search, status, sort, page = '1', limit = '10' } = req.query;
+    const { search, status, sort, role, page = '1', limit = '10' } = req.query;
     const pageNum = parseInt(page as string, 10);
     const limitNum = parseInt(limit as string, 10);
 
-    const query: QueryFilter<IUser> = { role: { $in: ['ADMIN', 'GUEST'] } };
+    const query: QueryFilter<IUser> = {};
+
+    if (role && role !== 'ALL') {
+      query.role = role as string;
+    } else {
+      query.role = { $in: ['ADMIN', 'GUEST'] };
+    }
 
     if (search) {
       const searchRegex = new RegExp(search as string, 'i');
@@ -131,7 +137,7 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
     }
 
     if (status && status !== 'ALL') {
-      query.status = status;
+      query.status = status as string;
     }
 
     const sortOrder = sort === 'asc' ? 1 : -1;
@@ -257,11 +263,9 @@ export const updateUserPermissions = async (
     );
 
     if (invalidPermissions.length > 0) {
-      res
-        .status(400)
-        .json({
-          message: `Quyền không hợp lệ: ${invalidPermissions.join(', ')}`,
-        });
+      res.status(400).json({
+        message: `Quyền không hợp lệ: ${invalidPermissions.join(', ')}`,
+      });
       return;
     }
 
@@ -282,12 +286,10 @@ export const updateUserPermissions = async (
     user.permissions = permissions;
     await user.save();
 
-    res
-      .status(200)
-      .json({
-        message: 'Permissions updated successfully',
-        permissions: user.permissions,
-      });
+    res.status(200).json({
+      message: 'Permissions updated successfully',
+      permissions: user.permissions,
+    });
   } catch (_error) {
     res
       .status(500)
