@@ -25,13 +25,16 @@ interface SendEmailOptions {
  * @param options - recipient, subject, and content (text or html)
  */
 export const sendEmail = async (options: SendEmailOptions) => {
-  const mailOptions = {
-    from: process.env.SMTP_FROM || 'no-reply@wettenhalls.com.au',
+  const mailOptions: any = {
     to: Array.isArray(options.to) ? options.to.join(', ') : options.to,
     subject: options.subject,
     text: options.text,
     html: options.html,
   };
+
+  if (process.env.SMTP_FROM) {
+    mailOptions.from = process.env.SMTP_FROM;
+  }
 
   try {
     const info = await transporter.sendMail(mailOptions);
