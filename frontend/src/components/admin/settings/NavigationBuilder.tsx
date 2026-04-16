@@ -10,13 +10,12 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { DragOverlay, type DragStartEvent } from '@dnd-kit/core';
-import { motion, LayoutGroup, AnimatePresence } from 'framer-motion';
+import { LayoutGroup } from 'framer-motion';
 import { Plus, Save, RotateCcw, Trash2, Copy } from 'lucide-react';
 import { SortableItem } from './SortableItem';
 import { Modal } from '../../ui/Modal/Modal';
