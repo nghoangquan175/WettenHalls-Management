@@ -199,7 +199,7 @@ export const forgotPassword = async (
     resetTokens.set(token, email);
 
     // Auto-delete token after 1 hour
-    setTimeout(() => resetTokens.delete(token), 3600000);
+    setTimeout(() => resetTokens.delete(token), 1800000);
 
     const resetUrl = `${process.env.HOMEPAGE_ORIGIN}/reset-password/${token}`;
 
