@@ -6,6 +6,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  useDroppable,
   type DragEndEvent,
 } from '@dnd-kit/core';
 import {
@@ -183,45 +184,115 @@ export function NavigationBuilder({
     setActiveItem(null);
     const { active, over } = event;
 
-    if (over && active.id !== over.id) {
-      setItems((prevItems) => {
-        // Find if it's a root item
-        const activeRootIndex = prevItems.findIndex(
-          (item) => item.id === active.id
-        );
-        const overRootIndex = prevItems.findIndex(
-          (item) => item.id === over.id
-        );
+    if (!over) return;
 
-        if (activeRootIndex !== -1 && overRootIndex !== -1) {
-          return arrayMove(prevItems, activeRootIndex, overRootIndex);
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    if (activeId === overId) return;
+
+    setItems((prevItems) => {
+      // 1. Helper to find item and its parent
+      const findItemAndParent = (
+        list: NavItem[],
+        targetId: string,
+        parentId?: string
+      ): { item: NavItem; parentId?: string; index: number } | null => {
+        for (let i = 0; i < list.length; i++) {
+          if (list[i].id === targetId)
+            return { item: list[i], parentId, index: i };
+          if (list[i].children) {
+            const found = findItemAndParent(
+              list[i].children!,
+              targetId,
+              list[i].id
+            );
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+
+      const activeData = findItemAndParent(prevItems, activeId);
+      if (!activeData) return prevItems;
+
+      const { item: activeItem, parentId: activeParentId } = activeData;
+
+      // 2. Identify the target (Over)
+      // Check if dropped on an "empty sub-item" zone
+      let targetParentId: string | undefined = undefined;
+      const isEmptyZone = overId.startsWith('empty-children-');
+      if (isEmptyZone) {
+        targetParentId = overId.replace('empty-children-', '');
+      } else {
+        const overData = findItemAndParent(prevItems, overId);
+        if (overData) {
+          targetParentId = overData.parentId;
+        }
+      }
+
+      // If dropped on a root item (not an empty zone and no parentId), it belongs to root
+      if (!isEmptyZone && !targetParentId) {
+        // Target is root level
+        const overRootIndex = prevItems.findIndex((i) => i.id === overId);
+
+        // Remove from old location
+        let newItems = [...prevItems];
+        if (!activeParentId) {
+          newItems = newItems.filter((i) => i.id !== activeId);
+        } else {
+          newItems = newItems.map((p) =>
+            p.id === activeParentId
+              ? { ...p, children: p.children?.filter((c) => c.id !== activeId) }
+              : p
+          );
         }
 
-        // Find if it's a child item and identify its parent
-        return prevItems.map((item) => {
-          if (item.children) {
-            const activeChildIndex = item.children.findIndex(
-              (child) => child.id === active.id
-            );
-            const overChildIndex = item.children.findIndex(
-              (child) => child.id === over.id
-            );
+        // Insert at new root index
+        const insertIndex =
+          overRootIndex === -1 ? newItems.length : overRootIndex;
+        newItems.splice(insertIndex, 0, activeItem);
+        return newItems;
+      }
 
-            if (activeChildIndex !== -1 && overChildIndex !== -1) {
-              return {
-                ...item,
-                children: arrayMove(
-                  item.children,
-                  activeChildIndex,
-                  overChildIndex
-                ),
-              };
-            }
+      // Target is a child of targetParentId
+      if (targetParentId) {
+        // Prevent nesting too deep (limit to 1 level children)
+        // If activeItem is already a parent, we don't allow moving it into another parent
+        if (activeItem.children && activeItem.children.length > 0) {
+          return prevItems;
+        }
+
+        let newItems = [...prevItems];
+        // Remove from old location
+        if (!activeParentId) {
+          newItems = newItems.filter((i) => i.id !== activeId);
+        } else {
+          newItems = newItems.map((p) =>
+            p.id === activeParentId
+              ? { ...p, children: p.children?.filter((c) => c.id !== activeId) }
+              : p
+          );
+        }
+
+        // Add to new parent's children
+        return newItems.map((p) => {
+          if (p.id === targetParentId) {
+            const newChildren = [...(p.children || [])];
+            const overChildIndex = newChildren.findIndex(
+              (c) => c.id === overId
+            );
+            const insertIndex =
+              overChildIndex === -1 ? newChildren.length : overChildIndex;
+            newChildren.splice(insertIndex, 0, activeItem);
+            return { ...p, children: newChildren };
           }
-          return item;
+          return p;
         });
-      });
-    }
+      }
+
+      return prevItems;
+    });
   };
 
   const addItem = (parentId?: string) => {
@@ -559,7 +630,7 @@ export function NavigationBuilder({
                     onDelete={() => removeItem(item.id)}
                     onAddChild={() => addItem(item.id)}
                   >
-                    {item.children && item.children.length > 0 && (
+                    {item.children && item.children.length > 0 ? (
                       <div className="ml-8 border-l-2 border-gray-100 pl-4 mt-2">
                         <SortableContext
                           items={item.children}
@@ -586,6 +657,8 @@ export function NavigationBuilder({
                           </div>
                         </SortableContext>
                       </div>
+                    ) : (
+                      <EmptySubItemZone parentId={item.id} />
                     )}
                   </SortableItem>
                 ))}
@@ -657,6 +730,33 @@ export function NavigationBuilder({
           }}
         />
       )}
+    </div>
+  );
+}
+
+function EmptySubItemZone({ parentId }: { parentId: string }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `empty-children-${parentId}`,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={clsx(
+        'ml-8 mt-2 p-4 border-2 border-dashed rounded-xl transition-all flex flex-col items-center justify-center gap-2',
+        isOver
+          ? 'border-primary bg-primary/5 scale-[1.02]'
+          : 'border-gray-100 bg-gray-50/50'
+      )}
+    >
+      <p
+        className={clsx(
+          'text-xs ContentMRegular transition-colors',
+          isOver ? 'text-primary' : 'text-gray-400'
+        )}
+      >
+        No sub-items. Drag items here or click "+" to add.
+      </p>
     </div>
   );
 }
