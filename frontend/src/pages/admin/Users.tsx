@@ -406,6 +406,8 @@ const Users = () => {
             );
           };
 
+          if (user.role === 'GUEST') return null;
+
           return (
             <div
               className="flex flex-wrap gap-2 items-center"
