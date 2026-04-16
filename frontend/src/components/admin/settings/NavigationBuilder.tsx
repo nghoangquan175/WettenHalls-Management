@@ -14,6 +14,8 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
+import { DragOverlay, type DragStartEvent } from '@dnd-kit/core';
+import { motion, LayoutGroup, AnimatePresence } from 'framer-motion';
 import { Plus, Save, RotateCcw, Trash2, Copy } from 'lucide-react';
 import { SortableItem } from './SortableItem';
 import { Modal } from '../../ui/Modal/Modal';
@@ -76,6 +78,8 @@ export function NavigationBuilder({
   const [showSaveAsModal, setShowSaveAsModal] = useState(false);
   const [newVersionName, setNewVersionName] = useState('');
   const [pendingVersionId, setPendingVersionId] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeItem, setActiveItem] = useState<NavItem | null>(null);
 
   const [confirmState, setConfirmState] = useState<{
     type: 'none' | 'save' | 'reset' | 'activate' | 'delete' | 'switch-version';
@@ -156,29 +160,63 @@ export function NavigationBuilder({
     }
   };
 
-  const handleDragEnd = (event: DragEndEvent, parentId?: string) => {
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    setActiveId(active.id as string);
+
+    // Find the item being dragged to show in overlay
+    const findItem = (items: NavItem[]): NavItem | null => {
+      for (const item of items) {
+        if (item.id === active.id) return item;
+        if (item.children) {
+          const found = findItem(item.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    setActiveItem(findItem(items));
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveId(null);
+    setActiveItem(null);
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
       setItems((prevItems) => {
-        if (!parentId) {
-          const oldIndex = prevItems.findIndex((item) => item.id === active.id);
-          const newIndex = prevItems.findIndex((item) => item.id === over.id);
-          return arrayMove(prevItems, oldIndex, newIndex);
+        // Find if it's a root item
+        const activeRootIndex = prevItems.findIndex(
+          (item) => item.id === active.id
+        );
+        const overRootIndex = prevItems.findIndex(
+          (item) => item.id === over.id
+        );
+
+        if (activeRootIndex !== -1 && overRootIndex !== -1) {
+          return arrayMove(prevItems, activeRootIndex, overRootIndex);
         }
 
+        // Find if it's a child item and identify its parent
         return prevItems.map((item) => {
-          if (item.id === parentId && item.children) {
-            const oldIndex = item.children.findIndex(
+          if (item.children) {
+            const activeChildIndex = item.children.findIndex(
               (child) => child.id === active.id
             );
-            const newIndex = item.children.findIndex(
+            const overChildIndex = item.children.findIndex(
               (child) => child.id === over.id
             );
-            return {
-              ...item,
-              children: arrayMove(item.children, oldIndex, newIndex),
-            };
+
+            if (activeChildIndex !== -1 && overChildIndex !== -1) {
+              return {
+                ...item,
+                children: arrayMove(
+                  item.children,
+                  activeChildIndex,
+                  overChildIndex
+                ),
+              };
+            }
           }
           return item;
         });
@@ -498,56 +536,101 @@ export function NavigationBuilder({
 
       {/* Builder Area */}
       <div className="bg-gray-50/50 border border-gray-100 rounded-3xl p-6 min-h-[400px]">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={(e) => handleDragEnd(e)}
-        >
-          <SortableContext items={items} strategy={verticalListSortingStrategy}>
-            {items.map((item) => (
-              <SortableItem
-                key={item.id}
-                id={item.id}
-                label={item.label}
-                url={item.url}
-                icon={item.icon}
-                onEdit={() => setEditingItem({ item })}
-                onDelete={() => removeItem(item.id)}
-                onAddChild={() => addItem(item.id)}
-              >
-                {item.children && item.children.length > 0 && (
-                  <div className="ml-8 border-l-2 border-gray-100 pl-4">
-                    <DndContext
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={(e) => handleDragEnd(e, item.id)}
+        <LayoutGroup>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={items}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-2">
+                {items.map((item) => (
+                  <SortableItem
+                    key={item.id}
+                    id={item.id}
+                    label={item.label}
+                    url={item.url}
+                    icon={item.icon}
+                    onEdit={() => setEditingItem({ item })}
+                    onDelete={() => removeItem(item.id)}
+                    onAddChild={() => addItem(item.id)}
+                  >
+                    {item.children && item.children.length > 0 && (
+                      <div className="ml-8 border-l-2 border-gray-100 pl-4 mt-2">
+                        <SortableContext
+                          items={item.children}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          <div className="space-y-2">
+                            {item.children.map((child) => (
+                              <SortableItem
+                                key={child.id}
+                                id={child.id}
+                                label={child.label}
+                                url={child.url}
+                                icon={child.icon}
+                                depth={1}
+                                onEdit={() =>
+                                  setEditingItem({
+                                    parentId: item.id,
+                                    item: child,
+                                  })
+                                }
+                                onDelete={() => removeItem(child.id, item.id)}
+                              />
+                            ))}
+                          </div>
+                        </SortableContext>
+                      </div>
+                    )}
+                  </SortableItem>
+                ))}
+              </div>
+            </SortableContext>
+
+            <DragOverlay adjustScale={false}>
+              {activeId && activeItem ? (
+                <div className="w-full pointer-events-none opacity-100">
+                  <div className="w-full max-w-[calc(100vw-3rem)] md:max-w-none">
+                    <SortableItem
+                      id={activeId}
+                      label={activeItem.label}
+                      url={activeItem.url}
+                      icon={activeItem.icon}
+                      depth={items.find((i) => i.id === activeId) ? 0 : 1}
+                      isOverlay
+                      onEdit={() => {}}
+                      onDelete={() => {}}
                     >
-                      <SortableContext
-                        items={item.children}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        {item.children.map((child) => (
-                          <SortableItem
-                            key={child.id}
-                            id={child.id}
-                            label={child.label}
-                            url={child.url}
-                            icon={child.icon}
-                            depth={1}
-                            onEdit={() =>
-                              setEditingItem({ parentId: item.id, item: child })
-                            }
-                            onDelete={() => removeItem(child.id, item.id)}
-                          />
-                        ))}
-                      </SortableContext>
-                    </DndContext>
+                      {activeItem.children &&
+                        activeItem.children.length > 0 && (
+                          <div className="ml-8 border-l-2 border-gray-100 pl-4 mt-2 space-y-2">
+                            {activeItem.children.map((child) => (
+                              <SortableItem
+                                key={child.id}
+                                id={child.id}
+                                label={child.label}
+                                url={child.url}
+                                icon={child.icon}
+                                depth={1}
+                                isOverlay={true}
+                                onEdit={() => {}}
+                                onDelete={() => {}}
+                              />
+                            ))}
+                          </div>
+                        )}
+                    </SortableItem>
                   </div>
-                )}
-              </SortableItem>
-            ))}
-          </SortableContext>
-        </DndContext>
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        </LayoutGroup>
 
         <button
           onClick={() => addItem()}
