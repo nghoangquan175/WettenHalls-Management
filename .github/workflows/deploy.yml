@@ -71,7 +71,7 @@ jobs:
             ${{ env.FRONTEND_IMAGE }}:latest
             ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
           build-args: |
-            VITE_API_URL=${{ secrets.VITE_API_URL }}
+            VITE_API_URL=${{ vars.VITE_API_URL }}
 
   # ---- Job 3: Deploy to Azure VM ----
   deploy:
