@@ -3,8 +3,10 @@ services:
     image: ghcr.io/nghoangquan175/wettenhalls-backend:latest
     container_name: wettenhalls-backend
     restart: unless-stopped
-    ports:
-      - "5000:5000"
+    # ports:
+    #   - "5000:5000"
+    networks:
+      - wettenhalls-net
     env_file:
       - ./backend/.env.production
     environment:
@@ -26,8 +28,10 @@ services:
     image: ghcr.io/nghoangquan175/wettenhalls-frontend:latest
     container_name: wettenhalls-frontend
     restart: unless-stopped
-    ports:
-      - "3000:80"
+    # ports:
+    #   - "3000:80"
+    networks:
+      - wettenhalls-net
     deploy:
       resources:
         limits:
