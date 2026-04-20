@@ -28,6 +28,9 @@ RUN npm ci --omit=dev
 
 # Copy built files from builder stage
 COPY --from=builder /app/dist ./dist
+# Copy migration files for production runs
+COPY --from=builder /app/migrate-mongo-config.js ./
+COPY --from=builder /app/migrations ./migrations
 
 # Expose port
 EXPOSE 5000
