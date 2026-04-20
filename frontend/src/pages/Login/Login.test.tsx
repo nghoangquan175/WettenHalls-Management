@@ -5,6 +5,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import LoginPage from './index';
 import { authService } from '../../services/authService';
 import { useAuth } from '../../hooks/useAuth';
+import type { UserRole } from '../../constants/navigation';
 
 // Mock các thư viện và hooks
 vi.mock('../../services/authService', () => ({
@@ -33,12 +34,19 @@ describe('LoginPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useAuth as any).mockReturnValue({
+    vi.mocked(useAuth).mockReturnValue({
       user: null,
       login: mockLogin,
       connectionError: false,
       authError: null,
       clearAuthError: mockClearAuthError,
+      isInitializing: false,
+      logout: function (): Promise<void> {
+        throw new Error('Function not implemented.');
+      },
+      triggerAuthError: function (): void {
+        throw new Error('Function not implemented.');
+      },
     });
   });
 
@@ -79,7 +87,7 @@ describe('LoginPage', () => {
 
   it('3. Hiển thị thông báo lỗi khi sai tên đăng nhập hoặc mật khẩu (API Error)', async () => {
     const errorMessage = 'Invalid credentials';
-    (authService.login as any).mockRejectedValue(new Error(errorMessage));
+    vi.mocked(authService.login).mockRejectedValue(new Error(errorMessage));
 
     render(
       <MemoryRouter>
@@ -100,13 +108,16 @@ describe('LoginPage', () => {
 
   it('4. Chuyển hướng thành công khi thông tin đúng', async () => {
     const mockUserResponse = {
+      message: 'Success',
       user: {
         id: '1',
         name: 'Admin User',
-        role: 'ADMIN',
+        role: 'ADMIN' as UserRole,
+        email: 'admin@example.com',
+        permissions: [],
       },
     };
-    (authService.login as any).mockResolvedValue(mockUserResponse);
+    vi.mocked(authService.login).mockResolvedValue(mockUserResponse);
 
     render(
       <MemoryRouter>
