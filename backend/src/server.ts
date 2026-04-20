@@ -102,7 +102,8 @@ if (!isProduction || process.env.SHOW_DOCS === 'true') {
       spec: {
         content: specs,
       },
-    })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
   );
 }
 
