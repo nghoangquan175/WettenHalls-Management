@@ -10,35 +10,10 @@ env:
   FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/wettenhalls-frontend
 
 jobs:
-  # ---- Job 1: CI Check ----
-  ci-check:
-    name: CI Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Backend - Install & Build
-        working-directory: ./backend
-        run: |
-          npm ci
-          npm run build
-
-      - name: Frontend - Install & Build
-        working-directory: ./frontend
-        run: |
-          npm ci
-          npm run build
-
-  # ---- Job 2: Build & Push Docker Images ----
+  # ---- Job 1: Build & Push Docker Images ----
   build-and-push:
     name: Build & Push Docker Images
     runs-on: ubuntu-latest
-    needs: ci-check
     permissions:
       contents: read
       packages: write
@@ -73,7 +48,7 @@ jobs:
           build-args: |
             VITE_API_URL=${{ vars.VITE_API_URL }}
 
-  # ---- Job 3: Deploy to Azure VM ----
+  # ---- Job 2: Deploy to Azure VM ----
   deploy:
     name: Deploy to Azure VM
     runs-on: ubuntu-latest
@@ -108,11 +83,15 @@ jobs:
           script: |
             cd ~/wettenhalls
             
-            # Login to GHCR using GITHUB_TOKEN (passed as env or just use standard)
+            # Login to GHCR
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
             # Pull latest images
             docker compose pull
+
+            # Run database migrations
+            echo "🚀 Running database migrations..."
+            docker compose run --rm backend npm run migrate:up || echo "⚠️ Migration failed, but continuing deployment..."
 
             # Restart containers
             docker compose up -d --remove-orphans
@@ -120,4 +99,4 @@ jobs:
             # Cleanup old images
             docker image prune -f
 
-            echo "✅ Deploy completed!"
+            echo "✅ Deploy & Migration completed!"

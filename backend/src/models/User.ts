@@ -1,6 +1,47 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+/**
+ * @openapi
+ * components:
+ *   schemas:
+ *     User:
+ *       type: object
+ *       required:
+ *         - name
+ *         - email
+ *       properties:
+ *         id:
+ *           type: string
+ *           description: The auto-generated id of the user
+ *         name:
+ *           type: string
+ *           description: Full name of the user
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: Email address of the user
+ *         role:
+ *           type: string
+ *           enum: [SUPER_ADMIN, ADMIN, GUEST]
+ *           default: GUEST
+ *         status:
+ *           type: string
+ *           enum: [ACTIVE, INACTIVE, PENDING]
+ *           default: ACTIVE
+ *         permissions:
+ *           type: array
+ *           items:
+ *             type: string
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         inactivatedAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ */
+
 export const USER_ROLES = ['SUPER_ADMIN', 'ADMIN', 'GUEST'] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 
@@ -12,6 +53,7 @@ export interface IUser extends Document {
   permissions: string[];
   status: 'ACTIVE' | 'INACTIVE' | 'PENDING';
   createdAt: Date;
+  inactivatedAt?: Date | null;
   matchPassword(password: string): Promise<boolean>;
 }
 
@@ -32,6 +74,7 @@ const UserSchema: Schema = new Schema(
       default: 'ACTIVE',
     },
     createdAt: { type: Date, default: Date.now },
+    inactivatedAt: { type: Date, default: null },
   },
   {
     timestamps: true,

@@ -1,6 +1,42 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import slugify from 'slugify';
 
+/**
+ * @openapi
+ * components:
+ *   schemas:
+ *     Article:
+ *       type: object
+ *       required:
+ *         - title
+ *         - thumbnail
+ *         - description
+ *         - content
+ *         - poster
+ *       properties:
+ *         id:
+ *           type: string
+ *         title:
+ *           type: string
+ *         slug:
+ *           type: string
+ *         thumbnail:
+ *           type: string
+ *           description: URL to the article thumbnail
+ *         description:
+ *           type: string
+ *         content:
+ *           type: string
+ *         poster:
+ *           $ref: '#/components/schemas/User'
+ *         status:
+ *           type: string
+ *           enum: [DRAFT, PENDING, PUBLISHED, UNPUBLISHED]
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ */
+
 export interface IArticle extends Document {
   thumbnail: string;
   title: string;

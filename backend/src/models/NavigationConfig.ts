@@ -1,5 +1,39 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
+/**
+ * @openapi
+ * components:
+ *   schemas:
+ *     NavItem:
+ *       type: object
+ *       properties:
+ *         id: { type: string }
+ *         label: { type: string }
+ *         url: { type: string }
+ *         icon: { type: string }
+ *         targetBlank: { type: boolean }
+ *         children:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/NavItem'
+ *     NavigationConfig:
+ *       type: object
+ *       required:
+ *         - type
+ *         - versionName
+ *       properties:
+ *         id: { type: string }
+ *         type:
+ *           type: string
+ *           enum: [header, footer]
+ *         versionName: { type: string }
+ *         active: { type: boolean }
+ *         items:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/NavItem'
+ */
+
 export interface INavItem {
   id: string;
   label: string;

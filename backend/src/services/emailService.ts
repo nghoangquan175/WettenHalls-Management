@@ -25,7 +25,7 @@ interface SendEmailOptions {
  * @param options - recipient, subject, and content (text or html)
  */
 export const sendEmail = async (options: SendEmailOptions) => {
-  const mailOptions: any = {
+  const mailOptions: nodemailer.SendMailOptions = {
     to: Array.isArray(options.to) ? options.to.join(', ') : options.to,
     subject: options.subject,
     text: options.text,
