@@ -11,6 +11,9 @@ import uploadRoutes from './routes/uploadRoutes';
 import navigationRoutes from './routes/navigationRoutes';
 import { errorHandler } from './middleware/errorHandler';
 
+import { apiReference } from '@scalar/express-api-reference';
+import { specs } from './config/swagger';
+
 dotenv.config();
 
 const SESSION_SECRET = process.env.SESSION_SECRET;
@@ -90,6 +93,18 @@ app.use('/api/users', userRoutes);
 app.use('/api/articles', articleRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/navigation', navigationRoutes);
+
+// API Documentation - Only show in development or if SHOW_DOCS is true
+if (!isProduction || process.env.SHOW_DOCS === 'true') {
+  app.use(
+    '/api-docs',
+    apiReference({
+      spec: {
+        content: specs,
+      },
+    })
+  );
+}
 
 app.get('/', (req: Request, res: Response) => {
   res.json({
