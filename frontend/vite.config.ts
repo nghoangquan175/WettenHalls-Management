@@ -9,5 +9,8 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    env: {
+      DEBUG_PRINT_LIMIT: '0',
+    },
   },
 });
